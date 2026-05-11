@@ -53,6 +53,8 @@ module DuoRuby
       @root = File.expand_path(root)
       @host = host
       @port = Integer(port)
+      DuoRuby.config.host = @host
+      DuoRuby.config.port = @port
       @backend = backend || DuoRuby.load_app(:backend, root: @root)
       @next_client_id = 0
     end

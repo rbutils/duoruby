@@ -11,6 +11,12 @@ module DuoRuby
     # @return [String] the window title used by +duoruby launch+
     attr_accessor :title
 
+    # @return [String, nil] the server host, set by the framework before loading the app
+    attr_accessor :host
+
+    # @return [Integer, nil] the server port, set by the framework before loading the app
+    attr_accessor :port
+
     def initialize
       @title = "DuoRuby"
     end
