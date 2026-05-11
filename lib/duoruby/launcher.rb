@@ -1,16 +1,17 @@
 # frozen_string_literal: true
 
 require "socket"
-require "duoruby/server"
 require "duoruby/config"
 require "webview_util"
 
 module DuoRuby
-  # Starts the server on a free port and opens a native webview window.
+  # Starts the server in a child process and opens a native webview window
+  # on the main process's main thread.
   #
-  # The server runs in a background thread; the webview window blocks the
-  # calling thread until the user closes it, at which point the server is
-  # stopped.
+  # GTK requires all calls on the thread that called gtk_init (the OS main
+  # thread). The Async/Falcon server runs in a forked child process so each
+  # has full ownership of its own event loop. When the window is closed the
+  # child is terminated; when the child dies unexpectedly the window closes.
   #
   # The window title defaults to +DuoRuby.config.title+, which the application
   # can set in its +duoruby.rb+ config file:
@@ -36,26 +37,39 @@ module DuoRuby
       @height = height
     end
 
-    # Starts the server in a background thread, opens the native window, and
-    # blocks until the window is closed. Stops the server on exit.
+    # Forks the Async server into a child process, then opens the native
+    # window on the main thread. Blocks until the window is closed, then
+    # terminates the server child.
     #
     # @param output [IO] where to print the launch banner (default: +$stdout+)
     def run(output: $stdout)
-      server = Server.new(root: @root, host: @host, port: @port)
-      server_thread = start_server(server)
-      sleep 0.1 # give the server a moment to bind
-
-      title = @title || DuoRuby.config.title
       output.puts "launching http://#{@host}:#{@port}"
 
+      server_pid = fork { run_server }
+
+      wait_for_server
+
+      title = @title || DuoRuby.config.title
       window = WebviewUtil::Window.new(title: title, width: @width, height: @height)
       window.navigate("http://#{@host}:#{@port}")
       window.run
     ensure
-      server_thread&.kill
+      if server_pid
+        Process.kill(:TERM, server_pid) rescue nil
+        Process.waitpid(server_pid) rescue nil
+      end
     end
 
     private
+
+    # Runs the server in the child process.
+    def run_server
+      require "console"
+      require "duoruby/server"
+      Console.logger.fatal!
+      Server.new(root: @root, host: @host, port: @port)
+            .run(output: File.open(File::NULL, "w"))
+    end
 
     # Allocates a free TCP port by binding to port 0 and reading the assigned port.
     def free_port
@@ -65,12 +79,13 @@ module DuoRuby
       server&.close
     end
 
-    # Starts the server in a background thread.
-    def start_server(server)
-      Thread.new do
-        server.run(output: File.open(File::NULL, "w"))
-      rescue StandardError
-        # thread exits cleanly when window closes and we kill it
+    # Polls until the server is accepting TCP connections.
+    def wait_for_server
+      loop do
+        TCPSocket.new(@host, @port).close
+        break
+      rescue Errno::ECONNREFUSED
+        sleep 0.05
       end
     end
   end
