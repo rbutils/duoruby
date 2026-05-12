@@ -35,4 +35,14 @@ RSpec.describe DuoRuby::Config do
     DuoRuby.config.host.should == "0.0.0.0"
     DuoRuby.config.port.should == 4000
   end
+
+  it "has an empty frontend_gems list by default" do
+    DuoRuby.config.frontend_gems.should == []
+  end
+
+  it "allows frontend_gems to be set" do
+    DuoRuby.configure { |c| c.frontend_gems = %w[glimmer-dsl-web opal-async] }
+
+    DuoRuby.config.frontend_gems.should == %w[glimmer-dsl-web opal-async]
+  end
 end

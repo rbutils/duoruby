@@ -2,10 +2,11 @@
 
 source "https://rubygems.org"
 
-gemspec
+gem "duoruby", path: "../.."
 
-# For the glimmer_counter example integration test
 gem "glimmer-dsl-web", ">= 0.8.5"
 gem "opal-async", "~> 1.4.1"
 gem "opal-jquery", "~> 0.5.2"
 gem "to_collection", ">= 2.0.1"
+
+gem "base64", ">= 0.2"

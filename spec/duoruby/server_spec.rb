@@ -2,12 +2,16 @@
 
 require "spec_helper"
 require "duoruby/server"
+require "glimmer-dsl-web"
 
 RSpec.describe DuoRuby::Server do
-  let(:root) { File.expand_path("../../examples/chat", __dir__) }
+  after { DuoRuby.instance_variable_set(:@config, nil) }
+
+  let(:chat_root) { File.expand_path("../../examples/chat", __dir__) }
+  let(:counter_root) { File.expand_path("../../examples/glimmer_counter", __dir__) }
 
   it "serves a root page that loads the frontend script" do
-    response = described_class.new(root: root).call(Protocol::HTTP::Request["GET", "/"])
+    response = described_class.new(root: chat_root).call(Protocol::HTTP::Request["GET", "/"])
     body = response.read
 
     response.status.should == 200
@@ -16,8 +20,8 @@ RSpec.describe DuoRuby::Server do
     body.should_not include("duoruby-chat")
   end
 
-  it "compiles the sample frontend setup for the browser" do
-    javascript = described_class.new(root: root).frontend_javascript
+  it "compiles the chat sample frontend setup for the browser" do
+    javascript = described_class.new(root: chat_root).frontend_javascript
 
     javascript.should include("global_object.Opal")
     javascript.should include("'$default_room'")
@@ -27,5 +31,14 @@ RSpec.describe DuoRuby::Server do
     javascript.should include("$connect")
     javascript.should include("$socket_class")
     javascript.should_not include("window.location")
+  end
+
+  it "compiles the glimmer counter frontend including Opal, glimmer, and Counter" do
+    javascript = described_class.new(root: counter_root).frontend_javascript
+
+    javascript.should include("global_object.Opal")
+    javascript.should include("Glimmer")
+    javascript.should include("Counter")
+    javascript.should include("/duoruby/socket")
   end
 end

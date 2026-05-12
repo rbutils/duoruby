@@ -17,8 +17,16 @@ module DuoRuby
     # @return [Integer, nil] the server port, set by the framework before loading the app
     attr_accessor :port
 
+    # @return [Array<String>] extra gems whose Opal sources are added to the frontend build
+    attr_accessor :frontend_gems
+
+    # @return [Array<String>] paths to stub (compile as empty) in the frontend Opal build
+    attr_accessor :frontend_stubs
+
     def initialize
       @title = "DuoRuby"
+      @frontend_gems = []
+      @frontend_stubs = []
     end
   end
 
