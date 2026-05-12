@@ -63,4 +63,16 @@ RSpec.describe DuoRuby::Frontend do
 
     received.should == ["second:hello"]
   end
+
+  it "returns PromiseV2 from request calls in Opal" do
+    next unless RUBY_ENGINE == "opal"
+
+    transported = []
+    frontend = described_class.new { |message| transported << message }
+
+    promise = frontend.call(:load)
+
+    promise.class.should == PromiseV2
+    transported.should == [{"event" => "load", "params" => {}, "id" => "call-1"}]
+  end
 end

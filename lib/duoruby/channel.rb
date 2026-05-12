@@ -31,6 +31,41 @@ module DuoRuby
     # to remove that specific registration.
     Handler = Struct.new(:event, :block, :once)
 
+    class Namespace
+      def initialize(target, name)
+        @target = target
+        @name = name.to_s
+      end
+
+      def on(event, &handler)
+        @target.on(namespaced(event), &handler)
+      end
+
+      def one(event, &handler)
+        @target.one(namespaced(event), &handler)
+      end
+
+      def off(event = nil, handler = nil, &block)
+        return @target.off unless event
+
+        @target.off(namespaced(event), handler, &block)
+      end
+
+      def trigger(event, *args, **params)
+        @target.trigger(namespaced(event), *args, **params)
+      end
+
+      def send(event, **params)
+        @target.send(namespaced(event), **params)
+      end
+
+      private
+
+      def namespaced(event)
+        "#{@name}:#{event}"
+      end
+    end
+
     # Provides class-level (and module-level) event handler registration.
     #
     # When included in a module or class, HandlerMethods also *extends* that
@@ -100,6 +135,10 @@ module DuoRuby
       #   @param token [Handler] the value returned by {#on} or {#one}
       def off(event = nil, handler = nil, &block)
         remove_handler(handlers, event, handler || block)
+      end
+
+      def channel(name)
+        Namespace.new(self, name)
       end
 
       # @private — called when a module using HandlerMethods is included into a class.
@@ -233,6 +272,10 @@ module DuoRuby
       handlers.delete(event) if handlers[event]&.empty?
     end
 
+    def channel(name)
+      Namespace.new(self, name)
+    end
+
     # Returns a Proc wrapping the first registered handler for +event+, bound
     # to this instance via +instance_exec+. Returns +nil+ if no handler exists.
     # Used internally; may be useful for adapter integrations.
@@ -257,9 +300,9 @@ module DuoRuby
     # @return [nil]
     def dispatch(event, *args, **params)
       event = event.to_s
-      dispatch_handlers(event, handlers[event], *args, **params)
+      results = dispatch_handlers(event, handlers[event], *args, **params)
       dispatch_handlers("*", handlers["*"], event, *args, **params)
-      nil
+      results
     end
 
     # Alias for {#dispatch}.
@@ -278,11 +321,12 @@ module DuoRuby
     # Iterates over a snapshot of +event_handlers+, invoking each via +instance_exec+.
     # Removes one-shot handlers after they fire.
     def dispatch_handlers(event, event_handlers, *args, **params)
-      return unless event_handlers
+      return [] unless event_handlers
 
-      event_handlers.dup.each do |handler|
-        instance_exec(*args, **params, &handler.block)
+      event_handlers.dup.map do |handler|
+        result = instance_exec(*args, **params, &handler.block)
         off(event, handler.block) if handler.once
+        result
       end
     end
   end

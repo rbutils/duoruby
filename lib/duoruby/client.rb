@@ -28,15 +28,19 @@ module DuoRuby
     # @return [Hash{Symbol => Group}] groups this client currently belongs to
     attr_reader :groups
 
+    attr_reader :metadata
+
     # @param id [String] a unique identifier for this connection
     # @param writer [Proc, nil] callable that accepts a serialized message Hash;
     #   mutually exclusive with the block form
     # @yieldparam message [Hash] the serialized message to deliver
-    def initialize(id:, writer: nil, &writer_block)
+    def initialize(id:, writer: nil, metadata: {}, &writer_block)
       @id = id
       @writer = writer || writer_block
+      @metadata = metadata
       @attributes = {}
       @groups = {}
+      @accepted = true
     end
 
     # Reads an application attribute by symbol key.
@@ -59,6 +63,28 @@ module DuoRuby
     # @param params keyword arguments that become the message params
     def send(event, **params)
       @writer.call(Message.new(event, **params).to_h)
+    end
+
+    def deliver(message)
+      @writer.call(Message.coerce(message).to_h)
+    end
+
+    def join(group)
+      group.add(self)
+    end
+
+    def leave(group)
+      group.remove(self)
+    end
+
+    def accepted?
+      @accepted
+    end
+
+    def reject(code: :unauthorized, message: "connection rejected", details: nil)
+      @accepted = false
+      deliver(Message.error(code: code, message: message, details: details))
+      self
     end
   end
 end

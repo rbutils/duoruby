@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "uri"
 require "opal"
 require "opal/builder"
 require "opal-browser"
@@ -133,10 +134,11 @@ module DuoRuby
     # inbound frames until the connection closes.
     def websocket(request)
       Async::WebSocket::Adapters::HTTP.open(request) do |connection|
-        client = backend.connect(id: next_client_id) do |message|
+        client = backend.connect(id: next_client_id, metadata: connection_metadata(request)) do |message|
           connection.send_text(JSON.generate(message))
           connection.flush
         end
+        return unless client.accepted?
 
         while (text = connection.read)
           backend.receive(client, JSON.parse(text))
@@ -150,6 +152,15 @@ module DuoRuby
     def next_client_id
       @next_client_id += 1
       "client-#{@next_client_id}"
+    end
+
+    def connection_metadata(request)
+      query = request.path.to_s.split("?", 2)[1]
+      {
+        path: request.path.to_s.split("?", 2).first,
+        query: query ? URI.decode_www_form(query).to_h : {},
+        headers: request.headers.each.to_h
+      }
     end
 
     # Returns the HTML shell response.

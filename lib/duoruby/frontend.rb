@@ -3,6 +3,7 @@
 require "json"
 require "duoruby/message"
 require "duoruby/channel"
+require "promise/v2" if RUBY_ENGINE == "opal"
 
 module DuoRuby
   # Browser-side event hub. Manages the WebSocket connection and message dispatch.
@@ -28,6 +29,43 @@ module DuoRuby
   #     on(:snapshot) { |rooms:, **| puts "rooms: #{rooms.join(', ')}" }
   #   end
   class Frontend < Channel
+    class TestPromise
+      attr_reader :value, :error
+
+      def initialize
+        @resolved = false
+        @rejected = false
+        @then_handlers = []
+        @fail_handlers = []
+      end
+
+      def resolve(value = nil)
+        @resolved = true
+        @value = value
+        @then_handlers.each { |handler| handler.call(value) }
+        self
+      end
+
+      def reject(error = nil)
+        @rejected = true
+        @error = error
+        @fail_handlers.each { |handler| handler.call(error) }
+        self
+      end
+
+      def then(&handler)
+        @resolved ? handler.call(value) : @then_handlers << handler
+        self
+      end
+
+      def fail(&handler)
+        @rejected ? handler.call(error) : @fail_handlers << handler
+        self
+      end
+
+      alias_method :rescue, :fail
+    end
+
     # @return [Array<Hash>] every message sent through this frontend, for inspection
     attr_reader :sent
 
@@ -42,6 +80,8 @@ module DuoRuby
       super()
       @transport = transport || transport_block
       @sent = []
+      @pending_calls = {}
+      @next_call_id = 0
     end
 
     # Sends +event+ with +params+ to the server.
@@ -59,6 +99,18 @@ module DuoRuby
       message
     end
 
+    def transport=(transport)
+      @transport = transport
+    end
+
+    def call(event, **params)
+      id = next_call_id
+      promise = self.class.promise_class.new
+      @pending_calls[id] = promise
+      deliver(Message.request(event, id, **params).to_h)
+      promise
+    end
+
     # Opens the WebSocket connection and wires socket lifecycle events.
     #
     # Only available under Opal (requires +Browser::Socket+). Raises immediately
@@ -74,16 +126,33 @@ module DuoRuby
     # @param path [String] the socket path used when +url+ is not given
     # @return [self]
     # @raise [RuntimeError] if called outside Opal, or if already connected
-    def connect(url: nil, path: "/duoruby/socket")
+    def connect(url: nil, path: "/duoruby/socket", reconnect: false, backoff: 1)
       raise "already connected" if @socket
 
-      @socket = self.class.socket_class.new(url || self.class.default_socket_url(path))
+      @connect_url = url || self.class.default_socket_url(path)
+      @reconnect = reconnect
+      @reconnect_backoff = backoff
+      open_socket
+      self
+    end
+
+    def reconnect
+      @socket = nil
+      open_socket
+      trigger(:$reconnect)
+      self
+    end
+
+    def open_socket
+      @socket = self.class.socket_class.new(@connect_url)
       @transport = proc { |message| socket.write(JSON.generate(message)) }
 
       socket.on(:open) { trigger(:$connect) }
       socket.on(:message) { |event| receive(JSON.parse(event.data)) }
-      socket.on(:close) { trigger(:$disconnect) }
-      self
+      socket.on(:close) do
+        trigger(:$disconnect)
+        schedule_reconnect if @reconnect
+      end
     end
 
     # Coerces +message+ and dispatches it to the appropriate event handlers.
@@ -92,7 +161,16 @@ module DuoRuby
     # @param message [Message, Hash] the inbound message (raw parsed JSON or a Message)
     def receive(message)
       message = Message.coerce(message)
+      return resolve_call(message) if message.event == Message::REPLY_EVENT
+      return reject_call(message) if message.event == Message::ERROR_EVENT && message.reply_to
+
       dispatch(message.event, **message.params)
+    end
+
+    def deliver(message)
+      sent << message
+      @transport.call(message) if @transport
+      message
     end
 
     # Returns the default WebSocket URL derived from the current page location.
@@ -118,6 +196,33 @@ module DuoRuby
       raise "default frontend transport is only available under Opal" unless RUBY_ENGINE == "opal"
 
       ::Browser::Socket
+    end
+
+    def self.promise_class
+      defined?(::PromiseV2) ? ::PromiseV2 : TestPromise
+    end
+
+    private
+
+    def next_call_id
+      @next_call_id += 1
+      "call-#{@next_call_id}"
+    end
+
+    def resolve_call(message)
+      promise = @pending_calls.delete(message.reply_to)
+      promise&.resolve(message.params[:result])
+    end
+
+    def reject_call(message)
+      promise = @pending_calls.delete(message.reply_to)
+      promise&.reject(message.params)
+    end
+
+    def schedule_reconnect
+      if RUBY_ENGINE == "opal"
+        $window.set_timeout(proc { reconnect }, @reconnect_backoff * 1000)
+      end
     end
   end
 end

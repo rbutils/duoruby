@@ -14,6 +14,17 @@ module DuoRuby
   #   backend.group(:lobby) << client
   #   backend.group(:lobby).send(:announcement, text: "Server restart in 5 min")
   class Group
+    class Selection
+      def initialize(members)
+        @members = members
+      end
+
+      def send(event, **params)
+        @members.each { |client| client.send(event, **params) }
+        self
+      end
+    end
+
     # @return [Symbol] the group's name
     attr_reader :name
 
@@ -48,6 +59,27 @@ module DuoRuby
       members.delete(client)
       client.groups.delete(name)
       client
+    end
+
+    def include?(client)
+      members.include?(client)
+    end
+
+    def size
+      members.size
+    end
+
+    def empty?
+      members.empty?
+    end
+
+    def except(*clients)
+      Selection.new(members - clients)
+    end
+
+    def send_to_others(client, event, **params)
+      except(client).send(event, **params)
+      self
     end
 
     # Sends +event+ with +params+ to every current member.

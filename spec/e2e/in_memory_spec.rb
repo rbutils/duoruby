@@ -3,6 +3,7 @@
 require "spec_helper"
 require "duoruby/backend/setup"
 require "duoruby/frontend/setup"
+require "duoruby/testing"
 
 RSpec.describe "in-memory client/server flow" do
   it "lets frontend messages drive backend group broadcast" do
@@ -19,5 +20,17 @@ RSpec.describe "in-memory client/server flow" do
     frontend.send(:say, room: "lobby", text: "hello")
 
     delivered.should == [{"event" => "said", "params" => {"text" => "hello"}}]
+  end
+
+  it "wires a backend and frontend with the test harness" do
+    backend = DuoRuby.backend do
+      on(:ping) { "pong" }
+    end
+    connection = DuoRuby::Testing.connect(backend: backend)
+    resolved = []
+
+    connection.frontend.call(:ping).then { |value| resolved << value }
+
+    resolved.should == ["pong"]
   end
 end

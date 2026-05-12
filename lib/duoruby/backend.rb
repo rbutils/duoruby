@@ -47,10 +47,16 @@ module DuoRuby
     #   exclusive with the block form
     # @yieldparam message [Hash] the serialized message to deliver
     # @return [Client]
-    def connect(id:, writer: nil, &writer_block)
-      client = Client.new(id: id, writer: writer, &writer_block)
+    def connect(id:, writer: nil, metadata: {}, &writer_block)
+      client = Client.new(id: id, writer: writer, metadata: metadata, &writer_block)
+      return client.reject unless authenticate(client)
+
       dispatch(:$connect, client)
       client
+    end
+
+    def authenticate(_client)
+      true
     end
 
     # Fires the +:$disconnect+ event and removes +client+ from all its groups.
@@ -88,7 +94,13 @@ module DuoRuby
     # @param message [Message, Hash] the inbound message (raw parsed JSON or a Message)
     def receive(client, message)
       message = Message.coerce(message)
-      dispatch(message.event, client, **message.params)
+      results = dispatch(message.event, client, **message.params)
+      client.deliver(Message.reply(message.id, results.last)) if message.id
+      results
+    rescue StandardError => error
+      raise unless message&.id
+
+      client.deliver(Message.error(code: error.class.name, message: error.message, reply_to: message.id))
     end
   end
 end

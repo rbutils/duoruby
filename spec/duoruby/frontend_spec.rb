@@ -58,6 +58,67 @@ RSpec.describe DuoRuby::Frontend do
     events.should == [:connected, :disconnected]
   end
 
+  it "can reconnect with the same socket URL" do
+    fake_socket_class = Class.new do
+      attr_reader :url, :handlers
+
+      def initialize(url)
+        @url = url
+        @handlers = {}
+      end
+
+      def on(event, &block)
+        handlers[event] = block
+      end
+
+      def write(_message)
+      end
+    end
+    frontend_class = Class.new(described_class) do
+      define_singleton_method(:socket_class) { fake_socket_class }
+    end
+    events = []
+    frontend = frontend_class.new
+
+    frontend.on(:$reconnect) { events << :reconnected }
+    frontend.connect(url: "ws://example.test/duoruby/socket")
+    first_socket = frontend.socket
+    frontend.reconnect
+
+    frontend.socket.should_not equal(first_socket)
+    frontend.socket.url.should == "ws://example.test/duoruby/socket"
+    events.should == [:reconnected]
+  end
+
+  it "sends request messages and resolves call replies" do
+    transported = []
+    frontend = described_class.new { |message| transported << message }
+    resolved = []
+
+    promise = frontend.call(:load, id: 1)
+    promise.then { |value| resolved << value }
+    frontend.receive("event" => "$reply", "reply_to" => "call-1", "params" => {"result" => {"name" => "Alice"}})
+
+    transported.should == [{"event" => "load", "params" => {"id" => 1}, "id" => "call-1"}]
+    resolved.should == [{"name" => "Alice"}]
+  end
+
+  it "rejects call promises from structured errors" do
+    transported = []
+    frontend = described_class.new { |message| transported << message }
+    rejected = []
+
+    promise = frontend.call(:load)
+    promise.fail { |error| rejected << error }
+    frontend.receive(
+      "event" => "$error",
+      "reply_to" => "call-1",
+      "params" => {"code" => "not_found", "message" => "Missing"}
+    )
+
+    rejected.should == [{code: "not_found", message: "Missing"}]
+  end
+
   it "dispatches received messages to handlers" do
     received = []
     frontend = described_class.new
@@ -227,5 +288,18 @@ RSpec.describe DuoRuby::Frontend do
     first.received.should == ["HELLO"]
     second.received.should == ["hello"]
     frontend_class.handlers["notice"].length.should == 1
+  end
+
+  it "supports namespaced channel handlers and sends" do
+    transported = []
+    received = []
+    frontend = described_class.new { |message| transported << message }
+
+    frontend.channel(:chat).on(:message) { |text:| received << text }
+    frontend.channel(:chat).send(:join, room: "lobby")
+    frontend.receive("event" => "chat:message", "params" => {"text" => "hello"})
+
+    transported.should == [{"event" => "chat:join", "params" => {"room" => "lobby"}}]
+    received.should == ["hello"]
   end
 end
