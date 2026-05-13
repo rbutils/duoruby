@@ -6,7 +6,7 @@ The initial shape is intentionally small:
 
 - `require "duoruby"` loads backend setup on CRuby and frontend setup on Opal.
 - Code is common by default unless its file name says `frontend` or `backend`.
-- Application boot files are `app/backend/setup.rb` and `app/frontend/setup.rb`; see `examples/chat` for the sample app.
+- Application boot files are `app/setup/backend.rb` and `app/setup/frontend.rb`; see `examples/chat` for the sample app.
 - Frontend, backend clients, and groups use the same message API: `send :event, **params`; handlers use `on :event` with keyword params.
 - Browser frontends can call `connect` to use the default `/duoruby/socket` transport; socket open/close arrive as `on :$connect` and `on :$disconnect` handlers.
 - `duoruby serve` starts the Falcon-backed development server, serves `/`, compiles frontend Opal to `/duoruby/app.js`, and bridges `/duoruby/socket` to the backend.

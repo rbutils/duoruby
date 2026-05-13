@@ -9,7 +9,7 @@ module DuoRuby
   # given side (+:backend+ or +:frontend+):
   #
   #   <root>/duoruby.rb               # optional shared config
-  #   <root>/app/<side>/setup.rb      # side-specific entry point
+  #   <root>/app/setup/<side>.rb      # side-specific entry point
   #
   # They also ensure the application's root and +app/+ directories are on
   # +$LOAD_PATH+ so application code can +require+ its own files without
@@ -53,7 +53,7 @@ module DuoRuby
     config_path = File.join(root, "duoruby.rb")
     load config_path if File.file?(config_path)
 
-    setup_path = File.join(root, "app", side.to_s, "setup.rb")
+    setup_path = File.join(root, "app", "setup", "#{side}.rb")
     return unless File.file?(setup_path)
 
     load setup_path
@@ -61,7 +61,7 @@ module DuoRuby
   end
 
   # Registers the application instance produced by a setup file.
-  # Called from within +app/<side>/setup.rb+; the registered value is read
+  # Called from within +app/setup/<side>.rb+; the registered value is read
   # back by {.load_app} and then cleared.
   #
   # @param instance [Object] the backend or frontend instance
@@ -90,6 +90,6 @@ module DuoRuby
   # @return [Array<String, String>] +[config_path, setup_path]+
   def self.app_paths(side, root: Dir.pwd)
     root = File.expand_path(root)
-    [File.join(root, "duoruby.rb"), File.join(root, "app", side.to_s, "setup.rb")]
+    [File.join(root, "duoruby.rb"), File.join(root, "app", "setup", "#{side}.rb")]
   end
 end

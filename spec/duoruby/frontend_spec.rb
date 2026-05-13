@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "duoruby/frontend/setup"
+require "duoruby/setup/frontend"
 
 RSpec.describe DuoRuby::Frontend do
   it "emits messages through a transport" do

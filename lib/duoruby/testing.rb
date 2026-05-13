@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "duoruby/backend/setup"
-require "duoruby/frontend/setup"
+require "duoruby/setup/backend"
+require "duoruby/setup/frontend"
 
 module DuoRuby
   module Testing

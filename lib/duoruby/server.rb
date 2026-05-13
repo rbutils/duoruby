@@ -2,15 +2,13 @@
 
 require "json"
 require "uri"
-require "opal"
-require "opal/builder"
-require "opal-browser"
 require "async"
 require "async/http/endpoint"
 require "async/websocket/adapters/http"
 require "falcon/server"
 require "protocol/http/response"
-require "duoruby/backend/setup"
+require "duoruby/setup/backend"
+require "duoruby/server/frontend_compiler"
 
 module DuoRuby
   # HTTP and WebSocket server built on Falcon and Async.
@@ -49,7 +47,7 @@ module DuoRuby
     # @param host [String] the hostname or IP to bind to (default: +"127.0.0.1"+)
     # @param port [Integer, String] the port to listen on (default: +9292+)
     # @param backend [Backend, nil] an explicit backend instance; if omitted,
-    #   the backend is loaded from +<root>/app/backend/setup.rb+ via {DuoRuby.load_app}
+    #   the backend is loaded from +<root>/app/setup/backend.rb+ via {DuoRuby.load_app}
     def initialize(root: Dir.pwd, host: "127.0.0.1", port: 9292, backend: nil)
       @root = File.expand_path(root)
       @host = host
@@ -99,33 +97,15 @@ module DuoRuby
 
     # Compiles the Opal frontend to a JavaScript string.
     #
-    # Resets Opal's global path state, adds the +opal-browser+ and +paggio+
-    # gems, then builds the +opal+ runtime followed by +frontend/setup+
-    # (which pulls in the application's +app/frontend/setup.rb+).
+    # Resets Opal's global path state, adds configured frontend gems, then
+    # builds the +opal+ runtime followed by +setup/frontend+.
     #
     # Note: this method mutates global Opal state (+Opal.reset_paths!+) and
     # is not safe to call concurrently.
     #
     # @return [String] the concatenated JavaScript
     def frontend_javascript
-      Opal.reset_paths!
-      Opal.use_gem("opal-browser")
-      Opal.use_gem("paggio")
-      Opal.append_path(File.join(Gem::Specification.find_by_name("opal-browser").gem_dir, "opal"))
-
-      DuoRuby.config.frontend_gems.each do |gem_name|
-        Opal.use_gem(gem_name)
-        spec = Gem::Specification.find_by_name(gem_name)
-        opal_dir = File.join(spec.gem_dir, "opal")
-        Opal.append_path(opal_dir) if File.directory?(opal_dir)
-      end
-
-      builder = Opal::Builder.new
-      builder.stubs.concat(DuoRuby.config.frontend_stubs)
-      builder.append_paths(File.join(root, "app"), File.expand_path("..", __dir__))
-      builder.build("opal")
-      builder.build("frontend/setup")
-      builder.to_s
+      FrontendCompiler.new(root).call
     end
 
     private

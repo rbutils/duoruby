@@ -2,7 +2,7 @@
 
 require "spec_helper"
 require "stringio"
-require "duoruby/backend/setup"
+require "duoruby/setup/backend"
 require "duoruby/cli"
 
 RSpec.describe DuoRuby::CLI do

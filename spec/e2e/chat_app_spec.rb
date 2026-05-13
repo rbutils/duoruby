@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "duoruby/backend/setup"
-require "duoruby/frontend/setup"
+require "duoruby/setup/backend"
+require "duoruby/setup/frontend"
 
 RSpec.describe "sample chat app" do
   let(:root) { File.expand_path("../../examples/chat", __dir__) }

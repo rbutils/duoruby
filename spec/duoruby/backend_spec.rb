@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "duoruby/backend/setup"
+require "duoruby/setup/backend"
 
 RSpec.describe DuoRuby::Backend do
   it "broadcasts messages to grouped clients" do

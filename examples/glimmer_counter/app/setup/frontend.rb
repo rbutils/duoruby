@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "duoruby/frontend/setup"
+require "duoruby/setup/frontend"
 require "counter/frontend"
 
 Document.ready? do

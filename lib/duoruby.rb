@@ -7,18 +7,18 @@
 # branches on the Ruby engine:
 #
 # - Under *CRuby* it loads {DuoRuby::Backend} and the {DuoRuby.backend} factory
-#   (+duoruby/backend/setup+).
+#   (+duoruby/setup/backend+).
 # - Under *Opal* it loads {DuoRuby::Frontend}, the Opal/browser dependencies,
-#   and the {DuoRuby.frontend} factory (+duoruby/frontend/setup+).
+#   and the {DuoRuby.frontend} factory (+duoruby/setup/frontend+).
 #
-# Application entry points (+app/backend/setup.rb+ and +app/frontend/setup.rb+)
+# Application entry points (+app/setup/backend.rb+ and +app/setup/frontend.rb+)
 # are loaded separately by {DuoRuby.boot} or {DuoRuby.load_app}.
 
 require "duoruby/message"
 require "duoruby/channel"
 
 if RUBY_ENGINE == "opal"
-  require "duoruby/frontend/setup"
+  require "duoruby/setup/frontend"
 else
-  require "duoruby/backend/setup"
+  require "duoruby/setup/backend"
 end
