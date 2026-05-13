@@ -29,42 +29,10 @@ module DuoRuby
   #     on(:snapshot) { |rooms:, **| puts "rooms: #{rooms.join(', ')}" }
   #   end
   class Frontend < Channel
-    class TestPromise
-      attr_reader :value, :error
+    require "duoruby/frontend/test_promise"
+    require "duoruby/frontend/socket_transport"
 
-      def initialize
-        @resolved = false
-        @rejected = false
-        @then_handlers = []
-        @fail_handlers = []
-      end
-
-      def resolve(value = nil)
-        @resolved = true
-        @value = value
-        @then_handlers.each { |handler| handler.call(value) }
-        self
-      end
-
-      def reject(error = nil)
-        @rejected = true
-        @error = error
-        @fail_handlers.each { |handler| handler.call(error) }
-        self
-      end
-
-      def then(&handler)
-        @resolved ? handler.call(value) : @then_handlers << handler
-        self
-      end
-
-      def fail(&handler)
-        @rejected ? handler.call(error) : @fail_handlers << handler
-        self
-      end
-
-      alias_method :rescue, :fail
-    end
+    include SocketTransport
 
     # @return [Array<Hash>] every message sent through this frontend, for inspection
     attr_reader :sent
@@ -126,35 +94,6 @@ module DuoRuby
     # @param path [String] the socket path used when +url+ is not given
     # @return [self]
     # @raise [RuntimeError] if called outside Opal, or if already connected
-    def connect(url: nil, path: "/duoruby/socket", reconnect: false, backoff: 1)
-      raise "already connected" if @socket
-
-      @connect_url = url || self.class.default_socket_url(path)
-      @reconnect = reconnect
-      @reconnect_backoff = backoff
-      open_socket
-      self
-    end
-
-    def reconnect
-      @socket = nil
-      open_socket
-      trigger(:$reconnect)
-      self
-    end
-
-    def open_socket
-      @socket = self.class.socket_class.new(@connect_url)
-      @transport = proc { |message| socket.write(JSON.generate(message)) }
-
-      socket.on(:open) { trigger(:$connect) }
-      socket.on(:message) { |event| receive(JSON.parse(event.data)) }
-      socket.on(:close) do
-        trigger(:$disconnect)
-        schedule_reconnect if @reconnect
-      end
-    end
-
     # Coerces +message+ and dispatches it to the appropriate event handlers.
     # Params are forwarded as keyword arguments only (no positional client arg).
     #
@@ -171,31 +110,6 @@ module DuoRuby
       sent << message
       @transport.call(message) if @transport
       message
-    end
-
-    # Returns the default WebSocket URL derived from the current page location.
-    # Only valid under Opal; raises on CRuby.
-    #
-    # @param path [String] the socket path segment
-    # @return [String] e.g. +"wss://example.com/duoruby/socket"+
-    # @raise [RuntimeError] when called outside Opal
-    def self.default_socket_url(path = "/duoruby/socket")
-      raise "default frontend transport is only available under Opal" unless RUBY_ENGINE == "opal"
-
-      location = $window.location
-      protocol = location.scheme == "https:" ? "wss:" : "ws:"
-      "#{protocol}//#{location.host}#{path}"
-    end
-
-    # Returns the WebSocket class to use for connections.
-    # Only valid under Opal; raises on CRuby.
-    #
-    # @return [Class] +Browser::Socket+ under Opal
-    # @raise [RuntimeError] when called outside Opal
-    def self.socket_class
-      raise "default frontend transport is only available under Opal" unless RUBY_ENGINE == "opal"
-
-      ::Browser::Socket
     end
 
     def self.promise_class
@@ -217,12 +131,6 @@ module DuoRuby
     def reject_call(message)
       promise = @pending_calls.delete(message.reply_to)
       promise&.reject(message.params)
-    end
-
-    def schedule_reconnect
-      if RUBY_ENGINE == "opal"
-        $window.set_timeout(proc { reconnect }, @reconnect_backoff * 1000)
-      end
     end
   end
 end
