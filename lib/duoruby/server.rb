@@ -7,24 +7,28 @@ require "async/http/endpoint"
 require "async/websocket/adapters/http"
 require "falcon/server"
 require "protocol/http/response"
-require "duoruby/setup/backend"
-require "duoruby/server/frontend_compiler"
+require "duoruby/boot"
+require "duoruby/message"
+require "duoruby/channel"
+require "duoruby/client"
+require "duoruby/group"
 
 module DuoRuby
-  # HTTP and WebSocket server built on Falcon and Async.
+  # Application server built on Falcon and Async.
   #
-  # Server handles three routes:
+  # Server handles three HTTP routes:
   # - +GET /+               — serves an HTML shell page that loads the frontend script
   # - +GET /duoruby/app.js+ — compiles and serves the Opal frontend on demand
-  # - +GET /duoruby/socket+ — upgrades to a WebSocket and drives the backend
+  # - +GET /duoruby/socket+ — upgrades to a WebSocket and drives message handlers
   #
-  # The backend is loaded via {DuoRuby.load_app} unless one is supplied explicitly.
-  # Every WebSocket connection creates a {Client}, routes inbound JSON frames through
-  # {Backend#receive}, and cleans up via {Backend#disconnect} on close.
+  # Subclasses can declare message handlers with +on+ and can override +#call+ for
+  # custom HTTP routes before delegating to +super+.
   #
   # @example Starting the server from application code
-  #   DuoRuby::Server.new(root: __dir__, port: 3000).run
-  class Server
+  #   DuoRuby::Server.build(root: __dir__, port: 3000).run
+  class Server < Channel
+    require "duoruby/server/frontend_compiler"
+
     # Path that the browser WebSocket connects to.
     SOCKET_PATH = "/duoruby/socket"
 
@@ -40,22 +44,35 @@ module DuoRuby
     # @return [Integer] the bind port
     attr_reader :port
 
-    # @return [Backend] the backend instance used for this server
-    attr_reader :backend
+    # @return [Hash{Symbol => Group}] all groups that have been accessed on this server
+    attr_reader :groups
 
     # @param root [String] the application root directory
     # @param host [String] the hostname or IP to bind to (default: +"127.0.0.1"+)
     # @param port [Integer, String] the port to listen on (default: +9292+)
-    # @param backend [Backend, nil] an explicit backend instance; if omitted,
-    #   the backend is loaded from +<root>/app/setup/backend.rb+ via {DuoRuby.load_app}
-    def initialize(root: Dir.pwd, host: "127.0.0.1", port: 9292, backend: nil)
+    def initialize(root: Dir.pwd, host: "127.0.0.1", port: 9292)
+      super()
+      configure(root: root, host: host, port: port)
+      @groups = {}
+      @next_client_id = 0
+    end
+
+    def self.build(root: Dir.pwd, host: "127.0.0.1", port: 9292)
+      root = File.expand_path(root)
+      server = DuoRuby.load_app(:backend, root: root) || new(root: root, host: host, port: port)
+      server.configure(root: root, host: host, port: port)
+      server
+    end
+
+    def configure(root:, host:, port:)
       @root = File.expand_path(root)
+      config_path = File.join(@root, "duoruby.rb")
+      load config_path if File.file?(config_path)
       @host = host
       @port = Integer(port)
       DuoRuby.config.host = @host
       DuoRuby.config.port = @port
-      @backend = backend || DuoRuby.load_app(:backend, root: @root)
-      @next_client_id = 0
+      self
     end
 
     # Rack-compatible request handler. Routes to the appropriate private handler
@@ -108,23 +125,60 @@ module DuoRuby
       FrontendCompiler.new(root).call
     end
 
+    def connect(id:, writer: nil, metadata: {}, &writer_block)
+      client = Client.new(id: id, writer: writer, metadata: metadata, &writer_block)
+      return client.reject unless authenticate(client)
+
+      dispatch(:$connect, client)
+      client
+    end
+
+    def authenticate(_client)
+      true
+    end
+
+    def disconnect(client)
+      dispatch(:$disconnect, client)
+      client.groups.values.each { |group| group.remove(client) }
+      client
+    end
+
+    def group(name)
+      groups[name.to_sym] ||= Group.new(name)
+    end
+
+    def broadcast(group_name, event, **params)
+      group(group_name).send(event, **params)
+    end
+
+    def receive(client, message)
+      message = Message.coerce(message)
+      results = dispatch(message.event, client, **message.params)
+      client.deliver(Message.reply(message.id, results.last)) if message.id
+      results
+    rescue StandardError => error
+      raise unless message&.id
+
+      client.deliver(Message.error(code: error.class.name, message: error.message, reply_to: message.id))
+    end
+
     private
 
     # Upgrades the request to a WebSocket, creates a Client, and loops over
     # inbound frames until the connection closes.
     def websocket(request)
       Async::WebSocket::Adapters::HTTP.open(request) do |connection|
-        client = backend.connect(id: next_client_id, metadata: connection_metadata(request)) do |message|
+        client = connect(id: next_client_id, metadata: connection_metadata(request)) do |message|
           connection.send_text(JSON.generate(message))
           connection.flush
         end
         return unless client.accepted?
 
         while (text = connection.read)
-          backend.receive(client, JSON.parse(text))
+          receive(client, JSON.parse(text))
         end
       ensure
-        backend.disconnect(client) if client
+        disconnect(client) if client
       end
     end
 

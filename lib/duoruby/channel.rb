@@ -14,17 +14,17 @@ module DuoRuby
   # - Wildcard handlers that run on every event via {#on} with the +*+ event name
   # - Removal by event name, proc reference, or Handler token
   #
-  # {Backend} and {Socket} both inherit from Channel.
+  # {Server} and {Socket} both inherit from Channel.
   #
   # @example Declaring handlers at the class level (inherited by instances)
-  #   class MyBackend < DuoRuby::Backend
+  #   class MyServer < DuoRuby::Server
   #     on(:join) { |client, room:| group(room) << client }
   #   end
   #
   # @example Adding handlers on an instance
-  #   backend = MyBackend.new
-  #   token = backend.on(:join) { |client, room:| puts "#{client.id} joined #{room}" }
-  #   backend.off(token)  # remove by token
+  #   server = MyServer.new
+  #   token = server.on(:join) { |client, room:| puts "#{client.id} joined #{room}" }
+  #   server.off(token)  # remove by token
   class Channel
     # @return [Hash{String => Array<Handler>}] the event-to-handlers map for this object
     attr_reader :handlers
@@ -118,7 +118,7 @@ module DuoRuby
     # as-is. One-shot handlers are removed immediately after firing.
     #
     # @param event [String, Symbol] the event name
-    # @param args positional arguments to forward (e.g. the client in Backend handlers)
+    # @param args positional arguments to forward (e.g. the client in Server handlers)
     # @param params keyword arguments to forward (e.g. message params)
     # @return [nil]
     def dispatch(event, *args, **params)

@@ -1,24 +1,24 @@
 # frozen_string_literal: true
 
-require "duoruby/backend"
+require "duoruby/server"
 require "duoruby/boot"
 
 module DuoRuby
-  # Creates a new {Backend} instance, optionally configuring it via a block.
+  # Creates a new application {Server} instance, optionally configuring it via a block.
   #
-  # The block is evaluated in the context of the backend instance, so handler
+  # The block is evaluated in the context of the server instance, so handler
   # registration methods (+on+, +one+, +off+) are available directly.
   #
   # @example
-  #   backend = DuoRuby.backend do
+  #   server = DuoRuby.server do
   #     on(:join) { |client, room:| group(room) << client }
   #   end
   #
-  # @yieldparam — (block is instance_eval'd on the backend; no explicit param)
-  # @return [Backend]
-  def self.backend(&block)
-    Backend.new.tap do |backend|
-      backend.instance_eval(&block) if block
+  # @yieldparam — (block is instance_eval'd on the server; no explicit param)
+  # @return [Server]
+  def self.server(&block)
+    Server.new.tap do |server|
+      server.instance_eval(&block) if block
     end
   end
 end

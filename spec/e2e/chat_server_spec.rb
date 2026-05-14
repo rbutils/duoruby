@@ -30,7 +30,7 @@ RSpec.describe "sample chat server" do
 
   it "lets two WebSocket clients chat through the sample backend" do
     port = available_port
-    app = DuoRuby::Server.new(root: root, port: port)
+    app = DuoRuby::Server.build(root: root, port: port)
     endpoint = Async::HTTP::Endpoint.parse("http://127.0.0.1:#{port}")
     websocket_endpoint = Async::HTTP::Endpoint.parse("ws://127.0.0.1:#{port}/duoruby/socket")
 

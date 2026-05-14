@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
 require "duoruby/setup/backend"
-require "chat/backend"
+require "chat/server"
 
-DuoRuby.app = Chat::Backend.new
+DuoRuby.app = Chat::Server.new

@@ -9,8 +9,8 @@ module DuoRuby
   # key-value store for per-connection application state (e.g. current
   # room, display name, authentication status).
   #
-  # Instances are created by {Backend#connect} and passed as the first
-  # argument to every backend event handler.
+  # Instances are created by {Server#connect} and passed as the first
+  # argument to every server event handler.
   #
   # @example Sending a message to a client
   #   client.send(:snapshot, rooms: ["lobby"], users: ["Alice"])

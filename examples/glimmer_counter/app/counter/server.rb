@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "duoruby/backend"
+require "duoruby/server"
 
 module Counter
-  class Backend < DuoRuby::Backend
+  class Server < DuoRuby::Server
     on :$connect do |client|
       client.send :count, value: @count
     end

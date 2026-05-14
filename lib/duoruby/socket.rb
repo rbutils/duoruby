@@ -11,7 +11,7 @@ module DuoRuby
   # Socket inherits the full {Channel} event system. Declare handlers at the
   # class level (inherited by subclasses) or add them at runtime on an instance.
   #
-  # Unlike {Backend} handlers, Socket event handlers receive *only* the message
+  # Unlike server handlers, Socket event handlers receive *only* the message
   # params as keyword arguments — there is no client positional argument because
   # there is exactly one connection per browser socket instance.
   #
@@ -55,7 +55,7 @@ module DuoRuby
     # Sends +event+ with +params+ to the server.
     #
     # Events ending with +?+ are questions: they include a request id and return
-    # a promise that resolves when the backend replies. Other events are
+    # a promise that resolves when the server replies. Other events are
     # fire-and-forget and return the serialized message hash.
     #
     # @param event [String, Symbol] the event name

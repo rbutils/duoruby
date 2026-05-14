@@ -67,7 +67,7 @@ module DuoRuby
 
       require "duoruby/server"
 
-      DuoRuby::Server.new(**options).run(output: @output)
+      DuoRuby::Server.build(**options).run(output: @output)
       0
     end
 

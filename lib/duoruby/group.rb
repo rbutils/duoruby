@@ -8,11 +8,11 @@ module DuoRuby
   # which groups it belongs to. This makes it cheap to remove a client from
   # all its groups on disconnect without iterating every group.
   #
-  # Groups are created lazily by {Backend#group} and are keyed by symbol name.
+  # Groups are created lazily by {Server#group} and are keyed by symbol name.
   #
   # @example Adding a client to a group and broadcasting
-  #   backend.group(:lobby) << client
-  #   backend.group(:lobby).send(:announcement, text: "Server restart in 5 min")
+  #   server.group(:lobby) << client
+  #   server.group(:lobby).send(:announcement, text: "Server restart in 5 min")
   class Group
     class Selection
       def initialize(members)

@@ -3,10 +3,10 @@
 # DuoRuby — a lightweight dual-runtime WebSocket framework.
 #
 # This top-level loader requires the protocol primitives ({DuoRuby::Message} and
-# {DuoRuby::Channel}) that are shared between the backend and frontend, then
+# {DuoRuby::Channel}) that are shared between the server and frontend, then
 # branches on the Ruby engine:
 #
-# - Under *CRuby* it loads {DuoRuby::Backend} and the {DuoRuby.backend} factory
+# - Under *CRuby* it loads {DuoRuby::Server} and the {DuoRuby.server} factory
 #   (+duoruby/setup/backend+).
 # - Under *Opal* it loads {DuoRuby::Socket}, the Opal/browser dependencies,
 #   and the {DuoRuby.socket} factory (+duoruby/setup/frontend+).

@@ -67,7 +67,7 @@ module DuoRuby
       require "console"
       require "duoruby/server"
       Console.logger.fatal!
-      Server.new(root: @root, host: @host, port: @port)
+      Server.build(root: @root, host: @host, port: @port)
             .run(output: File.open(File::NULL, "w"))
     end
 

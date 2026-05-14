@@ -1,15 +1,15 @@
 # DuoRuby
 
-DuoRuby is a lightweight Ruby framework experiment for WebSocket-first apps with a CRuby backend and an Opal frontend.
+DuoRuby is a lightweight Ruby framework experiment for WebSocket-first apps with a CRuby server and an Opal browser socket.
 
 The initial shape is intentionally small:
 
-- `require "duoruby"` loads backend setup on CRuby and frontend setup on Opal.
+- `require "duoruby"` loads server setup on CRuby and browser setup on Opal.
 - Code is common by default unless its file name says `frontend` or `backend`.
 - Application boot files are `app/setup/backend.rb` and `app/setup/frontend.rb`; see `examples/chat` for the sample app.
-- Frontend, backend clients, and groups use the same message API: `send :event, **params`; handlers use `on :event` with keyword params.
-- Browser frontends can call `connect` to use the default `/duoruby/socket` transport; socket open/close arrive as `on :$connect` and `on :$disconnect` handlers.
-- `duoruby serve` starts the Falcon-backed development server, serves `/`, compiles frontend Opal to `/duoruby/app.js`, and bridges `/duoruby/socket` to the backend.
+- Browser sockets, server-side clients, and groups use the same message API: `send :event, **params`; handlers use `on :event` with keyword params.
+- Browser sockets can call `connect` to use the default `/duoruby/socket` transport; socket open/close arrive as `on :$connect` and `on :$disconnect` handlers.
+- `duoruby serve` starts the Falcon-backed development server, serves `/`, compiles frontend Opal to `/duoruby/app.js`, and bridges `/duoruby/socket` to the server.
 - Rack is not part of the default boot path.
 
 ## Chat Example

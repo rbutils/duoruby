@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require "chat"
-require "duoruby/backend"
+require "duoruby/server"
 
 module Chat
-  class Backend < DuoRuby::Backend
+  class Server < DuoRuby::Server
     attr_reader :room_members, :history
 
     on :$connect do |client|
