@@ -95,7 +95,13 @@ module DuoRuby
       return resolve_call(message) if message.event == Message::REPLY_EVENT
       return reject_call(message) if message.event == Message::ERROR_EVENT && message.reply_to
 
-      dispatch(message.event, **message.params)
+      results = dispatch(message.event, **message.params)
+      deliver(Message.reply(message.id, results.last).to_h) if message.id
+      results
+    rescue StandardError => error
+      raise unless message&.id
+
+      deliver(Message.error(code: error.class.name, message: error.message, reply_to: message.id).to_h)
     end
 
     def deliver(message)

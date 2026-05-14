@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "duoruby/message"
+require "duoruby/reply_promise"
 
 module DuoRuby
   # Represents a single connected WebSocket client.
@@ -41,6 +42,8 @@ module DuoRuby
       @attributes = {}
       @groups = {}
       @accepted = true
+      @pending_calls = {}
+      @next_call_id = 0
     end
 
     # Reads an application attribute by symbol key.
@@ -62,11 +65,23 @@ module DuoRuby
     # @param event [String, Symbol] the event name
     # @param params keyword arguments that become the message params
     def send(event, **params)
+      return send_question(event, **params) if question_event?(event)
+
       @writer.call(Message.new(event, **params).to_h)
     end
 
     def deliver(message)
       @writer.call(Message.coerce(message).to_h)
+    end
+
+    def resolve_call(message)
+      promise = @pending_calls.delete(message.reply_to)
+      promise&.resolve(message.params[:result])
+    end
+
+    def reject_call(message)
+      promise = @pending_calls.delete(message.reply_to)
+      promise&.reject(ReplyError.new(message.params))
     end
 
     def join(group)
@@ -85,6 +100,25 @@ module DuoRuby
       @accepted = false
       deliver(Message.error(code: code, message: message, details: details))
       self
+    end
+
+    private
+
+    def question_event?(event)
+      event.to_s.end_with?("?")
+    end
+
+    def send_question(event, **params)
+      id = next_call_id
+      promise = ReplyPromise.new
+      @pending_calls[id] = promise
+      @writer.call(Message.request(event, id, **params).to_h)
+      promise
+    end
+
+    def next_call_id
+      @next_call_id += 1
+      "call-#{@next_call_id}"
     end
   end
 end

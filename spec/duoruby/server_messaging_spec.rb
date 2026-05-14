@@ -2,6 +2,7 @@
 
 require "spec_helper"
 require "duoruby/setup/backend"
+require "duoruby/socket"
 
 RSpec.describe DuoRuby::Server do
   it "broadcasts messages to grouped clients" do
@@ -136,6 +137,38 @@ RSpec.describe DuoRuby::Server do
     delivered.should == [
       {"event" => "$error", "params" => {"code" => "ArgumentError", "message" => "bad id"}, "reply_to" => "call-1"}
     ]
+  end
+
+  it "lets server client question sends await socket handler replies" do
+    server = described_class.new
+    client = nil
+    socket = DuoRuby::Socket.new { |message| server.receive(client, message) }
+    socket.on(:name?) { "Alice" }
+    client = server.connect(id: "client-1") { |message| socket.receive(message) }
+
+    promise = client.send(:name?)
+    values = []
+    promise.then { |value| values << value }
+
+    promise.should be_a(DuoRuby::ReplyPromise)
+    promise.await.should == "Alice"
+    promise.__await__.should == "Alice"
+    values.should == ["Alice"]
+  end
+
+  it "rejects server client question sends when socket handlers fail" do
+    server = described_class.new
+    client = nil
+    socket = DuoRuby::Socket.new { |message| server.receive(client, message) }
+    socket.on(:name?) { raise ArgumentError, "missing name" }
+    client = server.connect(id: "client-1") { |message| socket.receive(message) }
+
+    promise = client.send(:name?)
+    errors = []
+    promise.fail { |error| errors << error }
+
+    lambda { promise.await }.should raise_error(DuoRuby::ReplyError, "missing name")
+    errors.first.code.should == "ArgumentError"
   end
 
   it "supports namespaced server channels" do

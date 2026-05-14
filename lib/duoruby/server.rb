@@ -153,6 +153,9 @@ module DuoRuby
 
     def receive(client, message)
       message = Message.coerce(message)
+      return client.resolve_call(message) if message.event == Message::REPLY_EVENT
+      return client.reject_call(message) if message.event == Message::ERROR_EVENT && message.reply_to
+
       results = dispatch(message.event, client, **message.params)
       client.deliver(Message.reply(message.id, results.last)) if message.id
       results
