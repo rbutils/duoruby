@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "duoruby/frontend"
+require "duoruby/socket"
 
-RSpec.describe DuoRuby::Frontend do
+RSpec.describe DuoRuby::Socket do
   it "emits messages in Opal" do
     transported = []
     frontend = described_class.new { |message| transported << message }

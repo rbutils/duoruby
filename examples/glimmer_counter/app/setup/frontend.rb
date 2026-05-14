@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "duoruby/setup/frontend"
-require "counter/frontend"
+require "counter/socket"
 
 Document.ready? do
-  Counter::Frontend.new.start
+  Counter::Socket.new.start
 end

@@ -8,12 +8,12 @@ require "promise/v2" if RUBY_ENGINE == "opal"
 module DuoRuby
   # Browser-side event hub. Manages the WebSocket connection and message dispatch.
   #
-  # Frontend inherits the full {Channel} event system. Declare handlers at the
+  # Socket inherits the full {Channel} event system. Declare handlers at the
   # class level (inherited by subclasses) or add them at runtime on an instance.
   #
-  # Unlike {Backend} handlers, Frontend event handlers receive *only* the message
+  # Unlike {Backend} handlers, Socket event handlers receive *only* the message
   # params as keyword arguments — there is no client positional argument because
-  # there is exactly one connection per frontend instance.
+  # there is exactly one connection per browser socket instance.
   #
   # A transport callable (proc or block) is responsible for delivering outbound
   # messages. Under Opal it is set automatically by {#connect}; in tests you can
@@ -21,20 +21,20 @@ module DuoRuby
   #
   # @example Inline transport for testing
   #   delivered = []
-  #   frontend = DuoRuby::Frontend.new { |msg| delivered << msg }
-  #   frontend.send(:join, room: "lobby")
+  #   socket = DuoRuby::Socket.new { |msg| delivered << msg }
+  #   socket.send(:join, room: "lobby")
   #
   # @example Subclass with class-level handlers
-  #   class MyFrontend < DuoRuby::Frontend
+  #   class MySocket < DuoRuby::Socket
   #     on(:snapshot) { |rooms:, **| puts "rooms: #{rooms.join(', ')}" }
   #   end
-  class Frontend < Channel
-    require "duoruby/frontend/test_promise"
-    require "duoruby/frontend/socket_transport"
+  class Socket < Channel
+    require "duoruby/socket/test_promise"
+    require "duoruby/socket/transport"
 
-    include SocketTransport
+    include Transport
 
-    # @return [Array<Hash>] every message sent through this frontend, for inspection
+    # @return [Array<Hash>] every message sent through this socket, for inspection
     attr_reader :sent
 
     # @return [Browser::Socket, nil] the active WebSocket, or nil before {#connect}

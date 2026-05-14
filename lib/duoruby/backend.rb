@@ -11,7 +11,7 @@ module DuoRuby
   # Backend inherits the full {Channel} event system. Declare handlers at the
   # class level (inherited by subclasses) or add them at runtime on an instance.
   #
-  # Event handler signatures differ from {Frontend}:
+  # Event handler signatures differ from browser-side {Socket} handlers:
   # - Lifecycle events (+$connect+, +$disconnect+) receive the {Client} as the sole argument.
   # - Message events receive the {Client} as the first positional argument, followed
   #   by the message params as keyword arguments.

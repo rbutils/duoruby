@@ -5,16 +5,16 @@ require "duoruby/setup/frontend"
 
 module DuoRuby
   module Testing
-    Connection = Struct.new(:backend, :frontend, :client, keyword_init: true)
+    Connection = Struct.new(:backend, :socket, :client, keyword_init: true)
 
-    def self.connect(backend: Backend.new, frontend: Frontend.new, id: "client-1", metadata: {})
-      frontend = frontend.class.new if frontend.is_a?(Class)
+    def self.connect(backend: Backend.new, socket: Socket.new, id: "client-1", metadata: {})
+      socket = socket.class.new if socket.is_a?(Class)
       client = nil
-      frontend_transport = proc { |message| backend.receive(client, message) }
+      socket_transport = proc { |message| backend.receive(client, message) }
 
-      frontend.transport = frontend_transport
-      client = backend.connect(id: id, metadata: metadata) { |message| frontend.receive(message) }
-      Connection.new(backend: backend, frontend: frontend, client: client)
+      socket.transport = socket_transport
+      client = backend.connect(id: id, metadata: metadata) { |message| socket.receive(message) }
+      Connection.new(backend: backend, socket: socket, client: client)
     end
   end
 end

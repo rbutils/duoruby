@@ -3,7 +3,7 @@
 require "spec_helper"
 require "duoruby/setup/frontend"
 
-RSpec.describe DuoRuby::Frontend do
+RSpec.describe DuoRuby::Socket do
   it "emits messages through a transport" do
     transported = []
     frontend = described_class.new { |message| transported << message }
@@ -17,7 +17,7 @@ RSpec.describe DuoRuby::Frontend do
   it "keeps the default browser transport behind connect" do
     frontend = described_class.new
 
-    -> { frontend.connect }.should raise_error(RuntimeError, "default frontend transport is only available under Opal")
+    -> { frontend.connect }.should raise_error(RuntimeError, "default socket transport is only available under Opal")
   end
 
   it "dispatches lifecycle events from the default transport" do
@@ -129,7 +129,7 @@ RSpec.describe DuoRuby::Frontend do
     received.should == ["hello"]
   end
 
-  it "supports class-level handlers for frontend subclasses" do
+  it "supports class-level handlers for socket subclasses" do
     frontend_class = Class.new(described_class) do
       attr_reader :received
 

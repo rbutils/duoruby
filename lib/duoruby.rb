@@ -8,8 +8,8 @@
 #
 # - Under *CRuby* it loads {DuoRuby::Backend} and the {DuoRuby.backend} factory
 #   (+duoruby/setup/backend+).
-# - Under *Opal* it loads {DuoRuby::Frontend}, the Opal/browser dependencies,
-#   and the {DuoRuby.frontend} factory (+duoruby/setup/frontend+).
+# - Under *Opal* it loads {DuoRuby::Socket}, the Opal/browser dependencies,
+#   and the {DuoRuby.socket} factory (+duoruby/setup/frontend+).
 #
 # Application entry points (+app/setup/backend.rb+ and +app/setup/frontend.rb+)
 # are loaded separately by {DuoRuby.boot} or {DuoRuby.load_app}.

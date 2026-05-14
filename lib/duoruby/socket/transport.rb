@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module DuoRuby
-  class Frontend
-    module SocketTransport
+  class Socket
+    module Transport
       def self.included(receiver)
         receiver.extend(ClassMethods)
       end
@@ -38,7 +38,7 @@ module DuoRuby
 
       module ClassMethods
         def default_socket_url(path = "/duoruby/socket")
-          raise "default frontend transport is only available under Opal" unless RUBY_ENGINE == "opal"
+          raise "default socket transport is only available under Opal" unless RUBY_ENGINE == "opal"
 
           location = $window.location
           protocol = location.scheme == "https:" ? "wss:" : "ws:"
@@ -46,7 +46,7 @@ module DuoRuby
         end
 
         def socket_class
-          raise "default frontend transport is only available under Opal" unless RUBY_ENGINE == "opal"
+          raise "default socket transport is only available under Opal" unless RUBY_ENGINE == "opal"
 
           ::Browser::Socket
         end

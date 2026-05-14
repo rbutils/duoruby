@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "duoruby/frontend"
+require "duoruby/socket"
 
 # Load Opal/browser dependencies when running inside the compiled JavaScript bundle.
 if RUBY_ENGINE == "opal"
@@ -12,22 +12,22 @@ if RUBY_ENGINE == "opal"
 end
 
 module DuoRuby
-  # Creates a new {Frontend} instance, optionally configuring it via a block.
+  # Creates a new browser {Socket} instance, optionally configuring it via a block.
   #
-  # The block is evaluated in the context of the frontend instance, so handler
+  # The block is evaluated in the context of the socket instance, so handler
   # registration methods (+on+, +one+, +off+) are available directly.
   #
   # @example
-  #   frontend = DuoRuby.frontend do
+  #   socket = DuoRuby.socket do
   #     on(:snapshot) { |rooms:, **| puts rooms.inspect }
   #   end
   #
-  # @param transport [Proc, nil] optional transport callable (see {Frontend#initialize})
-  # @yieldparam — (block is instance_eval'd on the frontend; no explicit param)
-  # @return [Frontend]
-  def self.frontend(transport: nil, &block)
-    Frontend.new(transport: transport).tap do |frontend|
-      frontend.instance_eval(&block) if block
+  # @param transport [Proc, nil] optional transport callable (see {Socket#initialize})
+  # @yieldparam — (block is instance_eval'd on the socket; no explicit param)
+  # @return [Socket]
+  def self.socket(transport: nil, &block)
+    Socket.new(transport: transport).tap do |socket|
+      socket.instance_eval(&block) if block
     end
   end
 end

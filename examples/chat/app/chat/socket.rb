@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require "chat/log"
-require "duoruby/frontend"
+require "duoruby/socket"
 
 module Chat
-  class Frontend < DuoRuby::Frontend
+  class Socket < DuoRuby::Socket
     attr_reader :log, :messages, :rooms, :users, :status
     attr_accessor :room, :name
 

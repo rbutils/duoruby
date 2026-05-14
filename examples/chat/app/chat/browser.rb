@@ -2,11 +2,11 @@
 
 require "browser"
 require "chat"
-require "chat/frontend"
+require "chat/socket"
 
 module Chat
   class Browser
-    attr_reader :document, :frontend
+    attr_reader :document, :socket
 
     def initialize(document: $document)
       @document = document
@@ -57,24 +57,24 @@ module Chat
     end
 
     def connect
-      @frontend = Frontend.new(messages: messages, rooms: rooms, users: users, status: status)
-      frontend.connect
+      @socket = Socket.new(messages: messages, rooms: rooms, users: users, status: status)
+      socket.connect
     end
 
     def join
-      frontend.send(:join, room: room, name: name) if frontend
+      socket.send(:join, room: room, name: name) if socket
     end
 
     def speak
       text = text_input.value.to_s
       return if text.empty?
 
-      frontend.send(:speak, room: room, text: text)
+      socket.send(:speak, room: room, text: text)
       text_input.value = ""
     end
 
     def leave
-      frontend.send(:leave) if frontend
+      socket.send(:leave) if socket
     end
 
     def room

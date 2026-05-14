@@ -14,7 +14,7 @@ module DuoRuby
   # - Wildcard handlers that run on every event via {#on} with the +*+ event name
   # - Removal by event name, proc reference, or Handler token
   #
-  # {Backend} and {Frontend} both inherit from Channel.
+  # {Backend} and {Socket} both inherit from Channel.
   #
   # @example Declaring handlers at the class level (inherited by instances)
   #   class MyBackend < DuoRuby::Backend

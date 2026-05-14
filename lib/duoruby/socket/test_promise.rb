@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module DuoRuby
-  class Frontend
+  class Socket
     class TestPromise
       attr_reader :value, :error
 
