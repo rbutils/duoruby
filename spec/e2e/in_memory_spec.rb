@@ -24,12 +24,12 @@ RSpec.describe "in-memory client/server flow" do
 
   it "wires a backend and frontend with the test harness" do
     backend = DuoRuby.backend do
-      on(:ping) { "pong" }
+      on(:ping?) { "pong" }
     end
     connection = DuoRuby::Testing.connect(backend: backend)
     resolved = []
 
-    connection.frontend.call(:ping).then { |value| resolved << value }
+    connection.frontend.send(:ping?).then { |value| resolved << value }
 
     resolved.should == ["pong"]
   end

@@ -90,25 +90,25 @@ RSpec.describe DuoRuby::Frontend do
     events.should == [:reconnected]
   end
 
-  it "sends request messages and resolves call replies" do
+  it "sends question messages and resolves replies" do
     transported = []
     frontend = described_class.new { |message| transported << message }
     resolved = []
 
-    promise = frontend.call(:load, id: 1)
+    promise = frontend.send(:load?, id: 1)
     promise.then { |value| resolved << value }
     frontend.receive("event" => "$reply", "reply_to" => "call-1", "params" => {"result" => {"name" => "Alice"}})
 
-    transported.should == [{"event" => "load", "params" => {"id" => 1}, "id" => "call-1"}]
+    transported.should == [{"event" => "load?", "params" => {"id" => 1}, "id" => "call-1"}]
     resolved.should == [{"name" => "Alice"}]
   end
 
-  it "rejects call promises from structured errors" do
+  it "rejects question promises from structured errors" do
     transported = []
     frontend = described_class.new { |message| transported << message }
     rejected = []
 
-    promise = frontend.call(:load)
+    promise = frontend.send(:load?)
     promise.fail { |error| rejected << error }
     frontend.receive(
       "event" => "$error",

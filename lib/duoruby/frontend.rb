@@ -54,29 +54,21 @@ module DuoRuby
 
     # Sends +event+ with +params+ to the server.
     #
-    # The message is appended to {#sent} and, if a transport is configured,
-    # forwarded immediately.
+    # Events ending with +?+ are questions: they include a request id and return
+    # a promise that resolves when the backend replies. Other events are
+    # fire-and-forget and return the serialized message hash.
     #
     # @param event [String, Symbol] the event name
     # @param params keyword arguments that become the message params
-    # @return [Hash] the serialized message that was sent
+    # @return [Hash, PromiseV2] the serialized message or reply promise
     def send(event, **params)
-      message = Message.new(event, **params).to_h
-      sent << message
-      @transport.call(message) if @transport
-      message
+      return send_question(event, **params) if question_event?(event)
+
+      deliver(Message.new(event, **params).to_h)
     end
 
     def transport=(transport)
       @transport = transport
-    end
-
-    def call(event, **params)
-      id = next_call_id
-      promise = self.class.promise_class.new
-      @pending_calls[id] = promise
-      deliver(Message.request(event, id, **params).to_h)
-      promise
     end
 
     # Opens the WebSocket connection and wires socket lifecycle events.
@@ -121,6 +113,18 @@ module DuoRuby
     def next_call_id
       @next_call_id += 1
       "call-#{@next_call_id}"
+    end
+
+    def question_event?(event)
+      event.to_s.end_with?("?")
+    end
+
+    def send_question(event, **params)
+      id = next_call_id
+      promise = self.class.promise_class.new
+      @pending_calls[id] = promise
+      deliver(Message.request(event, id, **params).to_h)
+      promise
     end
 
     def resolve_call(message)
