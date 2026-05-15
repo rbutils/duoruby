@@ -37,6 +37,7 @@ DuoRuby is organized around one server object and one browser socket object:
 - `require "duoruby"` loads the server setup on CRuby and the browser setup on Opal.
 - Application boot files live at `app/setup/backend.rb` and `app/setup/frontend.rb`.
 - `duoruby serve` starts the Falcon-backed development server, serves `/`, compiles Opal frontend code to `/duoruby/app.js`, and bridges `/duoruby/socket` to the server.
+- `duoruby launch` starts the same server and opens it in a native webview window.
 
 Rack is not part of the default boot path.
 
@@ -96,27 +97,47 @@ Run the chat example:
 
 ```sh
 cd examples/chat
-bundle exec ../../exe/duoruby serve
+bundle install
+bundle exec duoruby serve
 ```
 
 Open `http://127.0.0.1:9292` in two browser windows. The sample app supports named rooms, presence lists, recent room history, room switching, leave, and validation errors.
+
+To open it in a native webview window instead:
+
+```sh
+bundle exec duoruby launch
+```
 
 Run the Glimmer counter example:
 
 ```sh
 cd examples/glimmer_counter
-bundle exec ../../exe/duoruby serve
+bundle install
+bundle exec duoruby serve
 ```
+
+Run the Ready Room game example:
+
+```sh
+cd examples/ready_room
+bundle install
+bundle exec duoruby serve
+```
+
+Ready Room demonstrates namespaced game events, browser-to-server questions, server-to-browser questions, group question collections, structured reply errors, and reconnect state sync.
 
 ## API
 
 - `DuoRuby::Server#on(event, &block)` registers server-side message handlers.
 - `DuoRuby::Server#group(name)` returns a broadcast group.
 - `DuoRuby::Server#broadcast(event, **params)` sends an event to all connected clients.
+- `DuoRuby::Client#channel(name)` and `DuoRuby::Group#channel(name)` send namespaced events without spelling raw colon-prefixed event names.
 - `DuoRuby::Socket#connect` opens the default `/duoruby/socket` transport.
 - `DuoRuby::Socket#send(event, **params)` sends fire-and-forget events or promise-returning `?` questions.
 - `DuoRuby::Client#send(event, **params)` sends from the server to a browser socket with the same `?` question convention.
 - `DuoRuby::Testing.connect` wires a server and socket together in memory for specs.
+- `duoruby launch [--host HOST] [--port PORT] [--title TITLE]` runs the app server and opens a native webview window.
 
 Lifecycle events use `$`-prefixed names:
 
