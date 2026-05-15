@@ -203,6 +203,24 @@ RSpec.describe DuoRuby::Server do
     group.except(alice).send(:name?).map(&:await).should == ["Bob"]
   end
 
+  it "supports namespaced sends from clients and groups" do
+    server = described_class.new
+    client = nil
+    socket = DuoRuby::Socket.new { |message| server.receive(client, message) }
+    delivered = []
+    socket.channel(:game).on(:ready?) { {ready: true} }
+    socket.channel(:game).on(:state) { |value:| delivered << value }
+    client = server.connect(id: "client-1") { |message| socket.receive(message) }
+    group = server.group(:players)
+    group << client
+
+    client.channel(:game).send(:state, value: "joined")
+    replies = group.channel(:game).send(:ready?)
+
+    delivered.should == ["joined"]
+    replies.map(&:await).should == [{ready: true}]
+  end
+
   it "supports namespaced server channels" do
     server_class = Class.new(described_class) do
       channel(:chat).on(:join) { |client, room:| group(room) << client }

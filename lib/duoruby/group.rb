@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "duoruby/channel/namespace"
+
 module DuoRuby
   # A named set of clients that can be messaged as a unit.
   #
@@ -24,6 +26,10 @@ module DuoRuby
         return replies if question_event?(event)
 
         self
+      end
+
+      def channel(name)
+        Channel::Namespace.new(self, name)
       end
 
       private
@@ -88,6 +94,10 @@ module DuoRuby
     def send_to_others(client, event, **params)
       except(client).send(event, **params)
       self
+    end
+
+    def channel(name)
+      Channel::Namespace.new(self, name)
     end
 
     # Sends +event+ with +params+ to every current member.

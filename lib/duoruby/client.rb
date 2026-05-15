@@ -2,6 +2,7 @@
 
 require "duoruby/message"
 require "duoruby/reply_promise"
+require "duoruby/channel/namespace"
 
 module DuoRuby
   # Represents a single connected WebSocket client.
@@ -72,6 +73,10 @@ module DuoRuby
 
     def deliver(message)
       @writer.call(Message.coerce(message).to_h)
+    end
+
+    def channel(name)
+      Channel::Namespace.new(self, name)
     end
 
     def resolve_call(message)
