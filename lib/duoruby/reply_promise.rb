@@ -2,19 +2,9 @@
 
 require "async"
 require "async/promise"
+require "duoruby/reply_error"
 
 module DuoRuby
-  class ReplyError < StandardError
-    attr_reader :code, :details, :params
-
-    def initialize(params)
-      @params = params
-      @code = params[:code]
-      @details = params[:details]
-      super(params[:message].to_s)
-    end
-  end
-
   # Async-backed server-side reply promise.
   #
   # It keeps Async::Promise's native #wait API and adds the small PromiseV2-like

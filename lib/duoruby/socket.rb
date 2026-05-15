@@ -3,6 +3,7 @@
 require "json"
 require "duoruby/message"
 require "duoruby/channel"
+require "duoruby/reply_error"
 require "promise/v2" if RUBY_ENGINE == "opal"
 
 module DuoRuby
@@ -110,6 +111,13 @@ module DuoRuby
       message
     end
 
+    def cancel_pending_calls(code: :disconnect, message: "connection closed", details: nil)
+      error = ReplyError.new(code: code, message: message, details: details)
+      @pending_calls.each_value { |promise| promise.reject(error) }
+      @pending_calls.clear
+      self
+    end
+
     def self.promise_class
       defined?(::PromiseV2) ? ::PromiseV2 : TestPromise
     end
@@ -140,7 +148,7 @@ module DuoRuby
 
     def reject_call(message)
       promise = @pending_calls.delete(message.reply_to)
-      promise&.reject(message.params)
+      promise&.reject(ReplyError.new(message.params))
     end
   end
 end

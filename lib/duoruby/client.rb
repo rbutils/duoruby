@@ -84,6 +84,13 @@ module DuoRuby
       promise&.reject(ReplyError.new(message.params))
     end
 
+    def cancel_pending_calls(code: :disconnect, message: "connection closed", details: nil)
+      error = ReplyError.new(code: code, message: message, details: details)
+      @pending_calls.each_value { |promise| promise.reject(error) }
+      @pending_calls.clear
+      self
+    end
+
     def join(group)
       group.add(self)
     end
@@ -98,6 +105,7 @@ module DuoRuby
 
     def reject(code: :unauthorized, message: "connection rejected", details: nil)
       @accepted = false
+      cancel_pending_calls(code: code, message: message, details: details)
       deliver(Message.error(code: code, message: message, details: details))
       self
     end

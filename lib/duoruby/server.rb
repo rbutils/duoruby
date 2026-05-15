@@ -139,6 +139,7 @@ module DuoRuby
 
     def disconnect(client)
       dispatch(:$disconnect, client)
+      client.cancel_pending_calls
       client.groups.values.each { |group| group.remove(client) }
       client
     end

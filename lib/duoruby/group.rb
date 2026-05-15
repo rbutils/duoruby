@@ -20,8 +20,16 @@ module DuoRuby
       end
 
       def send(event, **params)
-        @members.each { |client| client.send(event, **params) }
+        replies = @members.map { |client| client.send(event, **params) }
+        return replies if question_event?(event)
+
         self
+      end
+
+      private
+
+      def question_event?(event)
+        event.to_s.end_with?("?")
       end
     end
 
@@ -88,8 +96,16 @@ module DuoRuby
     # @param params keyword arguments forwarded to each {Client#send}
     # @return [self]
     def send(event, **params)
-      members.each { |client| client.send(event, **params) }
+      replies = members.map { |client| client.send(event, **params) }
+      return replies if question_event?(event)
+
       self
+    end
+
+    private
+
+    def question_event?(event)
+      event.to_s.end_with?("?")
     end
   end
 end

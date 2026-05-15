@@ -116,7 +116,42 @@ RSpec.describe DuoRuby::Socket do
       "params" => {"code" => "not_found", "message" => "Missing"}
     )
 
-    rejected.should == [{code: "not_found", message: "Missing"}]
+    rejected.first.should be_a(DuoRuby::ReplyError)
+    rejected.first.code.should == "not_found"
+    rejected.first.message.should == "Missing"
+  end
+
+  it "rejects pending question promises when the socket closes" do
+    fake_socket_class = Class.new do
+      attr_reader :handlers
+
+      def initialize(_url)
+        @handlers = {}
+      end
+
+      def on(event, &block)
+        handlers[event] = block
+      end
+
+      def write(_message)
+      end
+
+      def emit(event)
+        handlers.fetch(event).call
+      end
+    end
+    frontend_class = Class.new(described_class) do
+      define_singleton_method(:socket_class) { fake_socket_class }
+    end
+    frontend = frontend_class.new
+    rejected = []
+
+    frontend.connect(url: "ws://example.test/duoruby/socket")
+    frontend.send(:load?).fail { |error| rejected << error }
+    frontend.socket.emit(:close)
+
+    rejected.first.should be_a(DuoRuby::ReplyError)
+    rejected.first.code.should == "disconnect"
   end
 
   it "dispatches received messages to handlers" do

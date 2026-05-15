@@ -171,6 +171,38 @@ RSpec.describe DuoRuby::Server do
     errors.first.code.should == "ArgumentError"
   end
 
+  it "rejects pending server client questions on disconnect" do
+    server = described_class.new
+    client = server.connect(id: "client-1") {}
+
+    promise = client.send(:name?)
+    server.disconnect(client)
+
+    lambda { promise.await }.should raise_error(DuoRuby::ReplyError, "connection closed")
+    promise.value.code.should == "disconnect"
+  end
+
+  it "returns reply promise collections for group question sends" do
+    server = described_class.new
+    alice = nil
+    bob = nil
+    alice_socket = DuoRuby::Socket.new { |message| server.receive(alice, message) }
+    bob_socket = DuoRuby::Socket.new { |message| server.receive(bob, message) }
+    alice_socket.on(:name?) { "Alice" }
+    bob_socket.on(:name?) { "Bob" }
+    alice = server.connect(id: "alice") { |message| alice_socket.receive(message) }
+    bob = server.connect(id: "bob") { |message| bob_socket.receive(message) }
+    group = server.group(:lobby)
+
+    alice.join(group)
+    bob.join(group)
+
+    promises = group.send(:name?)
+
+    promises.map(&:await).should == ["Alice", "Bob"]
+    group.except(alice).send(:name?).map(&:await).should == ["Bob"]
+  end
+
   it "supports namespaced server channels" do
     server_class = Class.new(described_class) do
       channel(:chat).on(:join) { |client, room:| group(room) << client }

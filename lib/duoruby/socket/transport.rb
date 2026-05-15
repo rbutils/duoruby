@@ -32,6 +32,7 @@ module DuoRuby
         socket.on(:message) { |event| receive(JSON.parse(event.data)) }
         socket.on(:close) do
           trigger(:$disconnect)
+          cancel_pending_calls
           schedule_reconnect if @reconnect
         end
       end
