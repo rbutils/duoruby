@@ -4,6 +4,8 @@ DuoRuby is a lightweight Ruby framework for WebSocket-first applications with a 
 
 It gives Ruby applications a compact message DSL that works on both sides of the connection: browser sockets, server-side clients, and groups all use `send :event, **params`, while handlers use `on :event` with keyword parameters.
 
+The main use case is building web-based desktop applications: run Ruby on the local machine, write the frontend in Ruby through Opal, open it with `duoruby launch`, and still keep the same app loadable remotely through `duoruby serve`.
+
 The API and CLI are still evolving and should be considered unstable until version 1.0.
 
 ## Installation
@@ -37,7 +39,8 @@ DuoRuby is organized around one server object and one browser socket object:
 - `require "duoruby"` loads the server setup on CRuby and the browser setup on Opal.
 - Application boot files live at `app/setup/backend.rb` and `app/setup/frontend.rb`.
 - `duoruby serve` starts the Falcon-backed development server, serves `/`, compiles Opal frontend code to `/duoruby/app.js`, and bridges `/duoruby/socket` to the server.
-- `duoruby launch` starts the same server and opens it in a native webview window.
+- `duoruby launch` starts the same server and opens it in a native webview window for a desktop-app feel.
+- Because launched apps are still served over HTTP/WebSocket, the same project can also be loaded from another browser when you expose the host/port intentionally.
 
 Rack is not part of the default boot path.
 
