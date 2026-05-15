@@ -4,29 +4,17 @@ module Chat
   class Log
     attr_reader :entries
 
-    def initialize
-      @entries = []
-    end
+    def initialize = @entries = []
 
-    def joined(room:, name:)
-      entries << "#{name} joined #{room}"
-    end
+    def joined(room:, name:) = entries << "#{name} joined #{room}"
 
-    def left(room:, name:)
-      entries << "#{name} left #{room}"
-    end
+    def left(room:, name:) = entries << "#{name} left #{room}"
 
-    def message(name:, text:)
-      entries << "#{name}: #{text}"
-    end
+    def message(name:, text:) = entries << "#{name}: #{text}"
 
-    def system(text:)
-      entries << text
-    end
+    def system(text:) = entries << text
 
-    def error(text:)
-      entries << "Error: #{text}"
-    end
+    def error(text:) = entries << "Error: #{text}"
 
     def replace(messages)
       entries.clear

@@ -48,30 +48,20 @@ module ReadyRoom
       @errors = []
     end
 
-    def join
-      channel(:game).send(:join?, name: name)
-    end
+    def join = channel(:game).send(:join?, name: name)
 
     def mark_ready(value = true)
       self.ready = value
       channel(:game).send(:ready, ready: value)
     end
 
-    def answer(text)
-      channel(:game).send(:answer, text: text)
-    end
+    def answer(text) = channel(:game).send(:answer, text: text)
 
-    def state
-      channel(:game).send(:state?)
-    end
+    def state = channel(:game).send(:state?)
 
-    def start_round
-      channel(:game).send(:start_round?)
-    end
+    def start_round = channel(:game).send(:start_round?)
 
-    def score
-      channel(:game).send(:score?)
-    end
+    def score = channel(:game).send(:score?)
 
     def apply_state(state, message = nil)
       states << state

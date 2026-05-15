@@ -60,9 +60,7 @@ module Chat
       end
     end
 
-    def rooms
-      (Chat.rooms + room_members.keys).uniq
-    end
+    def rooms = (Chat.rooms + room_members.keys).uniq
 
     def users(room)
       ensure_room(room)
@@ -92,10 +90,7 @@ module Chat
       group(room).send :system, room: room, text: text
     end
 
-    def ensure_room(room)
-      room_members[room] ||= []
-      history[room] ||= []
-    end
+    def ensure_room(room) = (room_members[room] ||= []) && (history[room] ||= [])
 
     def normalize_name(name)
       value = name.to_s.strip
@@ -108,8 +103,6 @@ module Chat
       value.gsub(/[^a-z0-9_-]/, "-")[0, 32]
     end
 
-    def normalize_text(text)
-      text.to_s.strip[0, 500]
-    end
+    def normalize_text(text) = text.to_s.strip[0, 500]
   end
 end

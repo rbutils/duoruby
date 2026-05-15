@@ -77,9 +77,7 @@ module ReadyRoom
       @votes = {}
     end
 
-    def ask_ready_players
-      group(:players).channel(:game).send(:ready?).map(&:await)
-    end
+    def ask_ready_players = group(:players).channel(:game).send(:ready?).map(&:await)
 
     def scoreboard
       answers.map do |name, text|
@@ -102,13 +100,9 @@ module ReadyRoom
       broadcast_state("#{name} left") unless group(:players).empty?
     end
 
-    def broadcast_state(message)
-      group(:players).channel(:game).send(:state, state: state, message: message)
-    end
+    def broadcast_state(message) = group(:players).channel(:game).send(:state, state: state, message: message)
 
-    def state_for(client)
-      state.merge("you" => client[:name])
-    end
+    def state_for(client) = state.merge("you" => client[:name])
 
     def state
       {
@@ -138,8 +132,6 @@ module ReadyRoom
       value[0, 24]
     end
 
-    def normalize_text(text)
-      text.to_s.strip[0, 160]
-    end
+    def normalize_text(text) = text.to_s.strip[0, 160]
   end
 end

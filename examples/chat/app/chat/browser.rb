@@ -73,9 +73,7 @@ module Chat
       text_input.value = ""
     end
 
-    def leave
-      socket.send(:leave) if socket
-    end
+    def leave = socket.send(:leave) if socket
 
     def room
       value = room_input.value.to_s
@@ -93,11 +91,7 @@ module Chat
       element
     end
 
-    def button(label)
-      element = document.create_element("button")
-      element.text = label
-      element
-    end
+    def button(label) = document.create_element("button").tap { |element| element.text = label }
 
     def panel(title, list)
       element = document.create_element("section")
@@ -107,9 +101,7 @@ module Chat
       element
     end
 
-    def enter?(event)
-      event.key == "Enter"
-    end
+    def enter?(event) = event.key == "Enter"
 
     def install_styles
       style = document.create_element("style")

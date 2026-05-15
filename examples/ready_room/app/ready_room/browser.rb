@@ -63,9 +63,7 @@ module ReadyRoom
       socket.join.then { |state| render(state, "joined") }.fail { |error| set_status(error.message) }
     end
 
-    def ready
-      socket.mark_ready(true)
-    end
+    def ready = socket.mark_ready(true)
 
     def start_round
       socket.start_round.then { |state| render(state, "round started") }.fail { |error| set_status(error.message) }
@@ -80,9 +78,7 @@ module ReadyRoom
       socket.score.then { |entries| render_scoreboard(entries) }.fail { |error| set_status(error.message) }
     end
 
-    def refresh_state
-      socket.state.then { |state| render(state, "state refreshed") }
-    end
+    def refresh_state = socket.state.then { |state| render(state, "state refreshed") }
 
     def render(state, message = nil)
       replace_list(players, state.fetch("players", []))
@@ -90,18 +86,14 @@ module ReadyRoom
       set_status(message || "Ready")
     end
 
-    def render_scoreboard(entries)
-      replace_list(scoreboard, entries.map { |entry| "#{entry.fetch("name")}: #{entry.fetch("votes")}" })
-    end
+    def render_scoreboard(entries) = replace_list(scoreboard, entries.map { |entry| "#{entry.fetch("name")}: #{entry.fetch("votes")}" })
 
     def name
       value = name_input.value.to_s.strip
       value.empty? ? "anonymous" : value
     end
 
-    def set_status(text)
-      status.text = text
-    end
+    def set_status(text) = status.text = text
 
     def input(id, placeholder, value = nil)
       element = document.create_element("input", id: id, attrs: {"placeholder" => placeholder})
