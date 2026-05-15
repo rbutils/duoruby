@@ -60,12 +60,17 @@ module Chat
     def initialize(transport: nil, log: Log.new, messages: nil, rooms: nil, users: nil, status: nil, &transport_block)
       super(transport: transport, &transport_block)
       @log = log
+      attach(messages: messages, rooms: rooms, users: users, status: status)
+      @room = Chat.default_room
+      @name = "anonymous"
+    end
+
+    def attach(messages: nil, rooms: nil, users: nil, status: nil)
       @messages = messages
       @rooms = rooms
       @users = users
       @status = status
-      @room = Chat.default_room
-      @name = "anonymous"
+      self
     end
 
     def append(entry)

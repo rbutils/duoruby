@@ -6,7 +6,7 @@ require "chat/socket"
 
 module Chat
   class Browser
-    attr_reader :document, :socket
+    attr_reader :document, :root, :socket
 
     def initialize(document: $document)
       @document = document
@@ -26,43 +26,66 @@ module Chat
     attr_reader :name_input, :text_input, :room_input, :messages, :rooms, :users, :status
 
     def build
-      root = document["duoruby-chat"] || document["duoruby-root"] || document.body
-      root.clear
+      @root = document["duoruby-chat"] || document["duoruby-root"] || document.body
       install_styles
+
+      render_join
+    end
+
+    def render_join
+      root.clear
 
       title = document.create_element("h1")
       title.text = "DuoRuby team chat"
 
       @status = document.create_element("p", id: "status")
-      status.text = "Connecting..."
+      status.text = socket ? "Choose a room" : "Connecting..."
+      socket.attach(status: status) if socket
+      @name_input = input("name", "Name")
+      @room_input = input("room", "Room", Chat.default_room)
 
+      join_button = button("Join")
+      join_button.on(:click) { |event| event.prevent; join }
+      name_input.on(:keypress) { |event| join if enter?(event) }
+      room_input.on(:keypress) { |event| join if enter?(event) }
+
+      root << title << status << panel("Join a room", join_form(name_input, room_input, join_button))
+    end
+
+    def render_room(room)
+      root.clear
+
+      title = document.create_element("h1")
+      title.text = room
+      @status = document.create_element("p", id: "status")
+      status.text = "Joining #{room}..."
       @messages = document.create_element("ol", id: "messages")
       @rooms = document.create_element("ol", id: "rooms")
       @users = document.create_element("ol", id: "users")
-      @name_input = input("name", "Name")
-      @room_input = input("room", "Room", Chat.default_room)
       @text_input = input("text", "Message")
 
-      join_button = button("Join")
       send_button = button("Send")
       leave_button = button("Leave")
-
-      join_button.on(:click) { |event| event.prevent; join }
       send_button.on(:click) { |event| event.prevent; speak }
       leave_button.on(:click) { |event| event.prevent; leave }
       text_input.on(:keypress) { |event| speak if enter?(event) }
 
+      socket.attach(messages: messages, rooms: rooms, users: users, status: status)
       root << title << status << panel("Rooms", rooms) << panel("People", users) << messages
-      root << name_input << room_input << text_input << join_button << send_button << leave_button
+      root << text_input << send_button << leave_button
     end
 
     def connect
-      @socket = Socket.new(messages: messages, rooms: rooms, users: users, status: status)
+      @socket = Socket.new(status: status)
       socket.connect
+      status.text = "Choose a room" if status
     end
 
     def join
-      socket.send(:join, room: room, name: name) if socket
+      selected_room = room
+      selected_name = name
+      render_room(selected_room)
+      socket.send(:join, room: selected_room, name: selected_name) if socket
     end
 
     def speak
@@ -73,7 +96,10 @@ module Chat
       text_input.value = ""
     end
 
-    def leave = socket.send(:leave) if socket
+    def leave
+      socket.send(:leave) if socket
+      render_join
+    end
 
     def room
       value = room_input.value.to_s
@@ -93,6 +119,12 @@ module Chat
 
     def button(label) = document.create_element("button").tap { |element| element.text = label }
 
+    def join_form(*elements)
+      document.create_element("div", id: "join-form").tap do |form|
+        elements.each { |element| form << element }
+      end
+    end
+
     def panel(title, list)
       element = document.create_element("section")
       heading = document.create_element("h2")
@@ -111,6 +143,7 @@ module Chat
         h1 { margin: 0 0 8px; font-size: 32px; }
         h2 { margin: 0 0 8px; font-size: 16px; color: #93c5fd; }
         #status { color: #a7f3d0; }
+        #join-form { max-width: 420px; }
         section { display: inline-block; vertical-align: top; width: 44%; min-height: 96px; margin: 0 2% 16px 0; padding: 16px; background: #1f2937; border-radius: 12px; }
         ol { margin: 0 0 16px; padding-left: 24px; }
         #messages { min-height: 260px; padding: 16px 16px 16px 40px; background: #030712; border-radius: 12px; }
