@@ -30,6 +30,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "opal", ">= 1.8"
   spec.add_dependency "opal-browser", ">= 0.3"
   spec.add_dependency "webview_util", ">= 0.1.0"
+  spec.add_dependency "base64", ">= 0.2"
 
   spec.add_development_dependency "base64", ">= 0.2"
   spec.add_development_dependency "opal-rspec", ">= 1.1.0.alpha3"
