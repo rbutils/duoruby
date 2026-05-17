@@ -2,16 +2,14 @@
 
 require "socket"
 require "duoruby/config"
-require "webview_util"
 
 module DuoRuby
-  # Starts the server in a child process and opens a native webview window
-  # on the main process's main thread.
+  # Starts the server in the main process and opens a native webview window
+  # in a forked child process.
   #
-  # GTK requires all calls on the thread that called gtk_init (the OS main
-  # thread). The Async/Falcon server runs in a forked child process so each
-  # has full ownership of its own event loop. When the window is closed the
-  # child is terminated; when the child dies unexpectedly the window closes.
+  # The server is the application owner; the browser window is a client. The
+  # webview library is required inside the child, after +fork+, so native GUI
+  # state is initialized in the process that owns the window.
   #
   # The window title defaults to +DuoRuby.config.title+, which the application
   # can set in its +duoruby.rb+ config file:
@@ -37,38 +35,53 @@ module DuoRuby
       @height = height
     end
 
-    # Forks the Async server into a child process, then opens the native
-    # window on the main thread. Blocks until the window is closed, then
-    # terminates the server child.
+    # Forks the native browser into a child process, then runs the Async server
+    # in the main process. Blocks until the server exits or the window closes.
     #
     # @param output [IO] where to print the launch banner (default: +$stdout+)
     def run(output: $stdout)
       output.puts "launching http://#{@host}:#{@port}"
+      load_config
 
-      server_pid = fork { run_server }
+      browser_pid = fork_process { run_browser }
+      browser_watchdog = start_browser_watchdog(browser_pid)
 
-      wait_for_server
-
-      title = @title || DuoRuby.config.title
-      window = WebviewUtil::Window.new(title: title, width: @width, height: @height)
-      window.navigate("http://#{@host}:#{@port}")
-      window.run
+      run_server
+    rescue Interrupt
+      nil
     ensure
-      if server_pid
-        Process.kill(:TERM, server_pid) rescue nil
-        Process.waitpid(server_pid) rescue nil
+      if browser_pid
+        browser_watchdog&.kill
+        terminate_process(browser_pid)
       end
     end
 
     private
 
-    # Runs the server in the child process.
+    # Runs the server in the main process.
     def run_server
       require "console"
       require "duoruby/server"
       Console.logger.fatal!
       Server.build(root: @root, host: @host, port: @port)
             .run(output: File.open(File::NULL, "w"))
+    end
+
+    # Runs the browser in the child process.
+    def run_browser
+      wait_for_server
+
+      require "webview_util"
+
+      title = @title || DuoRuby.config.title
+      window = WebviewUtil::Window.new(title: title, width: @width, height: @height)
+      window.navigate("http://#{@host}:#{@port}")
+      window.run
+    end
+
+    def load_config
+      config_path = File.join(@root, "duoruby.rb")
+      load config_path if File.file?(config_path)
     end
 
     # Allocates a free TCP port by binding to port 0 and reading the assigned port.
@@ -88,5 +101,25 @@ module DuoRuby
         sleep 0.05
       end
     end
+
+    def fork_process(&block) = fork(&block)
+
+    def start_browser_watchdog(browser_pid)
+      Thread.new do
+        wait_process(browser_pid)
+        interrupt_server
+      rescue Errno::ECHILD
+        nil
+      end
+    end
+
+    def terminate_process(pid)
+      Process.kill(:TERM, pid) rescue nil
+      wait_process(pid) rescue nil
+    end
+
+    def wait_process(pid) = Process.waitpid(pid)
+
+    def interrupt_server = Thread.main.raise(Interrupt)
   end
 end
