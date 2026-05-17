@@ -2,10 +2,10 @@
 
 require "spec_helper"
 require "stringio"
-require "duoruby/launcher"
+require "duoruby/server"
 
-RSpec.describe DuoRuby::Launcher do
-  class LauncherProcessProbe < described_class
+RSpec.describe DuoRuby::Server do
+  class ServerLaunchProbe < described_class
     attr_reader :events
 
     def initialize(**options)
@@ -26,12 +26,12 @@ RSpec.describe DuoRuby::Launcher do
       nil
     end
 
-    def run_browser
+    def run_browser(**)
       @events << :run_browser
     end
 
-    def run_server
-      @events << :run_server
+    def run(output: $stdout)
+      @events << [:run_server, output.path]
     end
 
     def terminate_process(pid)
@@ -41,33 +41,34 @@ RSpec.describe DuoRuby::Launcher do
 
   it "runs the server in the main process and the browser in the forked child" do
     output = StringIO.new
-    launcher = LauncherProcessProbe.new(port: 4567)
+    server = ServerLaunchProbe.new(port: 4567)
 
-    launcher.run(output: output)
+    server.launch(output: output)
 
     output.string.should include("launching http://127.0.0.1:4567")
-    launcher.events.should == [
+    server.events.should == [
       :fork_browser,
       :run_browser,
       [:watch_browser, 1234],
-      :run_server,
+      [:run_server, File::NULL],
       [:terminate_browser, 1234]
     ]
   end
 
   it "terminates the browser child when the server exits with an error" do
-    probe_class = Class.new(LauncherProcessProbe) do
+    probe_class = Class.new(ServerLaunchProbe) do
       private
 
-      def run_server
-        @events << :run_server
+      def run(output: $stdout)
+        @events << [:run_server, output.path]
         raise "server failed"
       end
     end
-    launcher = probe_class.new(port: 4567)
+    server = probe_class.new(port: 4567)
 
-    -> { launcher.run(output: StringIO.new) }.should raise_error(RuntimeError, "server failed")
+    -> { server.launch(output: StringIO.new) }.should raise_error(RuntimeError, "server failed")
 
-    launcher.events.should include([:terminate_browser, 1234])
+    server.events.should include([:terminate_browser, 1234])
   end
+
 end

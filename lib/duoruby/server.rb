@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "socket"
 require "uri"
 require "async"
 require "async/http/endpoint"
@@ -26,6 +27,9 @@ module DuoRuby
   #
   # @example Starting the server from application code
   #   DuoRuby::Server.build(root: __dir__, port: 3000).run
+  #
+  # @example Starting the server and opening a native window
+  #   DuoRuby::Server.build(root: __dir__).launch
   class Server < Channel
     require "duoruby/server/frontend_compiler"
 
@@ -109,6 +113,31 @@ module DuoRuby
         task.wait
       ensure
         task&.stop
+      end
+    end
+
+    # Forks a native browser window into a child process, then runs this server
+    # in the main process. Blocks until the server exits or the window closes.
+    #
+    # @param output [IO] where to print the launch banner (default: +$stdout+)
+    # @param title [String, nil] native window title; +nil+ uses +DuoRuby.config.title+
+    # @param width [Integer] native window width in pixels
+    # @param height [Integer] native window height in pixels
+    def launch(output: $stdout, title: nil, width: 1280, height: 800)
+      output.puts "launching http://#{host}:#{port}"
+
+      browser_pid = fork_process { run_browser(title: title, width: width, height: height) }
+      browser_watchdog = start_browser_watchdog(browser_pid)
+
+      null_output = File.open(File::NULL, "w")
+      run(output: null_output)
+    rescue Interrupt
+      nil
+    ensure
+      null_output&.close
+      if browser_pid
+        browser_watchdog&.kill
+        terminate_process(browser_pid)
       end
     end
 
@@ -200,6 +229,48 @@ module DuoRuby
         headers: request.headers.each.to_h
       }
     end
+
+    # Runs the browser in the child process.
+    def run_browser(title:, width:, height:)
+      wait_for_server
+
+      require "webview_util"
+
+      window_title = title || DuoRuby.config.title
+      window = WebviewUtil::Window.new(title: window_title, width: width, height: height)
+      window.navigate("http://#{host}:#{port}")
+      window.run
+    end
+
+    # Polls until the server is accepting TCP connections.
+    def wait_for_server
+      loop do
+        TCPSocket.new(host, port).close
+        break
+      rescue Errno::ECONNREFUSED
+        sleep 0.05
+      end
+    end
+
+    def fork_process(&block) = fork(&block)
+
+    def start_browser_watchdog(browser_pid)
+      Thread.new do
+        wait_process(browser_pid)
+        interrupt_server
+      rescue Errno::ECHILD
+        nil
+      end
+    end
+
+    def terminate_process(pid)
+      Process.kill(:TERM, pid) rescue nil
+      wait_process(pid) rescue nil
+    end
+
+    def wait_process(pid) = Process.waitpid(pid)
+
+    def interrupt_server = Thread.main.raise(Interrupt)
 
     # Returns the HTML shell response.
     def html

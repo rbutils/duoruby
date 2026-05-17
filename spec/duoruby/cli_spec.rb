@@ -52,4 +52,26 @@ RSpec.describe DuoRuby::CLI do
     status.should == 1
     output.string.should include("unknown launch option")
   end
+
+  it "builds a server and launches the instance" do
+    output = StringIO.new
+    server = instance_double(DuoRuby::Server)
+    built_options = nil
+    launch_options = nil
+
+    allow(DuoRuby::Server).to receive(:build) do |**options|
+      built_options = options
+      server
+    end
+    allow(server).to receive(:launch) do |**options|
+      launch_options = options
+    end
+
+    status = described_class.new(["launch", "--port", "4567", "--title", "App"],
+                                 input: StringIO.new, output: output).call
+
+    status.should == 0
+    built_options.should == {root: Dir.pwd, port: 4567}
+    launch_options.should == {title: "App", output: output}
+  end
 end

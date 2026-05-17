@@ -78,9 +78,12 @@ module DuoRuby
       options = launch_options
       return 1 unless options
 
-      require "duoruby/launcher"
+      require "duoruby/server"
 
-      DuoRuby::Launcher.new(**options).run(output: @output)
+      server_config = server_options(options)
+      server_config[:port] ||= free_port(server_config.fetch(:host, "127.0.0.1"))
+
+      DuoRuby::Server.build(**server_config).launch(**window_options(options), output: @output)
       0
     end
 
@@ -113,6 +116,23 @@ module DuoRuby
       end
 
       options
+    end
+
+    def server_options(options)
+      options.slice(:root, :host, :port)
+    end
+
+    def window_options(options)
+      options.slice(:title)
+    end
+
+    def free_port(host)
+      require "socket"
+
+      server = TCPServer.new(host, 0)
+      server.addr[1]
+    ensure
+      server&.close
     end
 
     # Parses the options that follow the +serve+ command.
