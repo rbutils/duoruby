@@ -95,8 +95,8 @@ module DuoRuby
       handlers.delete(event) if handlers[event]&.empty?
     end
 
-    def channel(name)
-      Namespace.new(self, name)
+    def channel(name, &block)
+      Namespace.call(self, name, &block)
     end
 
     # Returns a Proc wrapping the first registered handler for +event+, bound

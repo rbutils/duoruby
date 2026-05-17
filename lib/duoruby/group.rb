@@ -28,8 +28,8 @@ module DuoRuby
         self
       end
 
-      def channel(name)
-        Channel::Namespace.new(self, name)
+      def channel(name, &block)
+        Channel::Namespace.call(self, name, &block)
       end
 
       private
@@ -96,8 +96,8 @@ module DuoRuby
       self
     end
 
-    def channel(name)
-      Channel::Namespace.new(self, name)
+    def channel(name, &block)
+      Channel::Namespace.call(self, name, &block)
     end
 
     # Sends +event+ with +params+ to every current member.

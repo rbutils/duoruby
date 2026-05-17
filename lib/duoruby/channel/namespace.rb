@@ -3,6 +3,14 @@
 module DuoRuby
   class Channel
     class Namespace
+      def self.call(target, name, &block)
+        namespace = new(target, name)
+        return namespace unless block
+        return block.call(namespace) if block.arity.positive?
+
+        namespace.instance_exec(&block)
+      end
+
       def initialize(target, name)
         @target = target
         @name = name.to_s

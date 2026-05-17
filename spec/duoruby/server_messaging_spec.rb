@@ -221,9 +221,81 @@ RSpec.describe DuoRuby::Server do
     replies.map(&:await).should == [{ready: true}]
   end
 
+  it "supports block-style namespaced sends from clients, groups, and selections" do
+    server = described_class.new
+    client = nil
+    socket = DuoRuby::Socket.new { |message| server.receive(client, message) }
+    delivered = []
+    socket.channel(:game) do
+      on(:ready?) { {ready: true} }
+      on(:state) { |value:| delivered << value }
+    end
+    client = server.connect(id: "client-1") { |message| socket.receive(message) }
+    group = server.group(:players)
+    group << client
+
+    client.channel(:game) { send(:state, value: "joined") }
+    group_replies = group.channel(:game) { send(:ready?) }
+    selection_replies = group.except.channel(:game) { send(:ready?) }
+
+    delivered.should == ["joined"]
+    group_replies.map(&:await).should == [{ready: true}]
+    selection_replies.map(&:await).should == [{ready: true}]
+  end
+
+  it "supports yielded namespaced sends from clients, groups, and selections" do
+    server = described_class.new
+    client = nil
+    socket = DuoRuby::Socket.new { |message| server.receive(client, message) }
+    delivered = []
+    socket.channel(:game) do |game|
+      game.on(:ready?) { {ready: true} }
+      game.on(:state) { |value:| delivered << value }
+    end
+    client = server.connect(id: "client-1") { |message| socket.receive(message) }
+    group = server.group(:players)
+    group << client
+
+    client.channel(:game) { |game| game.send(:state, value: "joined") }
+    group_replies = group.channel(:game) { |game| game.send(:ready?) }
+    selection_replies = group.except.channel(:game) { |game| game.send(:ready?) }
+
+    delivered.should == ["joined"]
+    group_replies.map(&:await).should == [{ready: true}]
+    selection_replies.map(&:await).should == [{ready: true}]
+  end
+
   it "supports namespaced server channels" do
     server_class = Class.new(described_class) do
       channel(:chat).on(:join) { |client, room:| group(room) << client }
+    end
+    server = server_class.new
+    client = server.connect(id: "client-1") {}
+
+    server.receive(client, "event" => "chat:join", "params" => {"room" => "lobby"})
+
+    server.group(:lobby).members.should == [client]
+  end
+
+  it "supports block-style namespaced server channels" do
+    server_class = Class.new(described_class) do
+      channel(:chat) do
+        on(:join) { |client, room:| group(room) << client }
+      end
+    end
+    server = server_class.new
+    client = server.connect(id: "client-1") {}
+
+    server.receive(client, "event" => "chat:join", "params" => {"room" => "lobby"})
+
+    server.group(:lobby).members.should == [client]
+  end
+
+  it "supports yielded namespaced server channels" do
+    server_class = Class.new(described_class) do
+      channel(:chat) do |chat|
+        chat.on(:join) { |client, room:| group(room) << client }
+      end
     end
     server = server_class.new
     client = server.connect(id: "client-1") {}

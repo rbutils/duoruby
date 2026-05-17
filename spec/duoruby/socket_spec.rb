@@ -337,4 +337,34 @@ RSpec.describe DuoRuby::Socket do
     transported.should == [{"event" => "chat:join", "params" => {"room" => "lobby"}}]
     received.should == ["hello"]
   end
+
+  it "supports block-style namespaced channel handlers and sends" do
+    transported = []
+    received = []
+    frontend = described_class.new { |message| transported << message }
+
+    frontend.channel(:chat) do
+      on(:message) { |text:| received << text }
+      send(:join, room: "lobby")
+    end
+    frontend.receive("event" => "chat:message", "params" => {"text" => "hello"})
+
+    transported.should == [{"event" => "chat:join", "params" => {"room" => "lobby"}}]
+    received.should == ["hello"]
+  end
+
+  it "supports yielded namespaced channel handlers and sends" do
+    transported = []
+    received = []
+    frontend = described_class.new { |message| transported << message }
+
+    frontend.channel(:chat) do |chat|
+      chat.on(:message) { |text:| received << text }
+      chat.send(:join, room: "lobby")
+    end
+    frontend.receive("event" => "chat:message", "params" => {"text" => "hello"})
+
+    transported.should == [{"event" => "chat:join", "params" => {"room" => "lobby"}}]
+    received.should == ["hello"]
+  end
 end

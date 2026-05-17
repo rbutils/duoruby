@@ -75,8 +75,8 @@ module DuoRuby
       @writer.call(Message.coerce(message).to_h)
     end
 
-    def channel(name)
-      Channel::Namespace.new(self, name)
+    def channel(name, &block)
+      Channel::Namespace.call(self, name, &block)
     end
 
     def resolve_call(message)

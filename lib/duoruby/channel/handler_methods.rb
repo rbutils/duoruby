@@ -23,8 +23,8 @@ module DuoRuby
         remove_handler(handlers, event, handler || block)
       end
 
-      def channel(name)
-        Namespace.new(self, name)
+      def channel(name, &block)
+        Namespace.call(self, name, &block)
       end
 
       def included(receiver)
